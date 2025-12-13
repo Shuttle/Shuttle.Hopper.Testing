@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Shuttle.Hopper.Memory.Tests/Shuttle.Hopper.Memory.Tests.csproj" />
+  <Project Path="Shuttle.Hopper.Testing/Shuttle.Hopper.Testing.csproj" />
+</Solution>

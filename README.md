@@ -1,4 +1,3 @@
-Shuttle.Hopper.Testing
-=================
+# Shuttle.Hopper.Testing
 
-Contains a number of fixtures that can be used to verify specific Shuttle.Hopper `IQueue` implementations.
+Contains a number of fixtures that can be used to verify specific Shuttle.Hopper `ITransport` implementations.

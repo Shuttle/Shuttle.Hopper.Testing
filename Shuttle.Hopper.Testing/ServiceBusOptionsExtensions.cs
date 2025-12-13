@@ -41,7 +41,7 @@ public static class ServiceBusOptionsExtensions
 
             serviceBusOptions.MessageSent += (eventArgs, _) =>
             {
-                logger.LogInformation("[{Scheme}.MessageEnqueued] : queue = '{TransportName}' / type = '{MessageType}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName, eventArgs.TransportMessage.MessageType);
+                logger.LogInformation("[{Scheme}.MessageSent] : queue = '{TransportName}' / type = '{MessageType}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName, eventArgs.TransportMessage.MessageType);
 
                 return Task.CompletedTask;
             };

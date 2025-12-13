@@ -353,9 +353,9 @@ public abstract class InboxFixture : IntegrationFixture
         finally
         {
             await serviceBus.DisposeAsync().ConfigureAwait(false);
-            await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
             await transportService.DisposeAsync().ConfigureAwait(false);
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);
+            await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
         }
     }
 

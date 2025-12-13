@@ -114,7 +114,7 @@ public class DeferredFixture : IntegrationFixture
                 var command = new SimpleCommand
                 {
                     Name = Guid.NewGuid().ToString(),
-                    Context = "EnqueueDeferredMessage"
+                    Context = "SendDeferredMessage"
                 };
 
                 var date = ignoreTillDate;
@@ -143,11 +143,11 @@ public class DeferredFixture : IntegrationFixture
 
             Assert.That(await feature.HasPendingDeferredMessagesAsync(), Is.False, "All the deferred messages were not handled.");
 
-            await serviceBus.StopAsync().ConfigureAwait(false);
-
             Assert.That(await serviceBusConfiguration.Inbox!.ErrorTransport!.HasPendingAsync().ConfigureAwait(false), Is.False);
             Assert.That(await serviceBusConfiguration.Inbox!.DeferredTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
             Assert.That(await serviceBusConfiguration.Inbox!.WorkTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
+
+            await serviceBus.StopAsync().ConfigureAwait(false);
         }
         finally
         {

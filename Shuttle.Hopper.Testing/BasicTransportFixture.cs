@@ -86,9 +86,9 @@ public class BasicTransportFixture : IntegrationFixture
         }
     }
 
-    protected async Task TestSimpleEnqueueAndGetMessageAsync(IServiceCollection services, string transportUriFormat)
+    protected async Task TestSimpleSendAndReceiveAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestSimpleEnqueueAndGetMessageAsync), 1, false, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), nameof(TestSimpleSendAndReceiveAsync), 1, false, transportUriFormat);
 
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();

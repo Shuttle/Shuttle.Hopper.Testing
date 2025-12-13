@@ -31,10 +31,10 @@ public class TransientQueueFixture : BasicTransportFixture
     }
 
     [Test]
-    public async Task Should_be_able_to_perform_simple_enqueue_and_get_message_async()
+    public async Task Should_be_able_to_perform_simple_send_and_receive_async()
     {
-        await TestSimpleEnqueueAndGetMessageAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}");
-        await TestSimpleEnqueueAndGetMessageAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}-transient");
+        await TestSimpleSendAndReceiveAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}");
+        await TestSimpleSendAndReceiveAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}-transient");
     }
 
     [Test]

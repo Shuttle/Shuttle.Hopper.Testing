@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
-using System.Threading;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -22,10 +21,10 @@ public class DeferredMessageFeature :
         _deferredMessageCount = Guard.AgainstNull(Guard.AgainstNull(messageCountOptions).Value).MessageCount;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
 
-        _pipelineOptions.PipelineCreated += OnPipelineCreated;
+        _pipelineOptions.PipelineCreated += PipelineCreated;
     }
 
-    private Task OnPipelineCreated(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
+    private Task PipelineCreated(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
     {
         if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline) || eventArgs.Pipeline.GetType() == typeof(DeferredMessagePipeline))
         {
@@ -54,7 +53,7 @@ public class DeferredMessageFeature :
 
     public async Task ExecuteAsync(IPipelineContext<MessageHandled> pipelineContext, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[OnAfterHandleMessage]");
+        _logger.LogInformation("[MessageHandled]");
 
         await _lock.WaitAsync(cancellationToken);
 
@@ -66,13 +65,11 @@ public class DeferredMessageFeature :
         {
             _lock.Release();
         }
-
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     public async Task ExecuteAsync(IPipelineContext<DeferredMessageProcessed> pipelineContext, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation($"[OnAfterProcessDeferredMessage] : deferred message returned = '{pipelineContext.Pipeline.State.GetDeferredMessageReturned()}'");
+        _logger.LogInformation($"[DeferredMessageProcessed] : deferred message returned = '{pipelineContext.Pipeline.State.GetDeferredMessageReturned()}'");
 
         if (!pipelineContext.Pipeline.State.GetDeferredMessageReturned())
         {
@@ -89,12 +86,10 @@ public class DeferredMessageFeature :
         {
             _lock.Release();
         }
-
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     public void Dispose()
     {
-        _pipelineOptions.PipelineCreated -= OnPipelineCreated;
+        _pipelineOptions.PipelineCreated -= PipelineCreated;
     }
 }

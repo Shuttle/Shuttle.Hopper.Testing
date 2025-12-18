@@ -60,7 +60,7 @@ public class DeferredFixture : IntegrationFixture
         services.ConfigureLogging(test);
     }
 
-    protected async Task TestDeferredProcessingAsync(IServiceCollection services, string transportUriFormat, bool isTransactional)
+    protected async Task TestDeferredProcessingAsync(IServiceCollection services, string transportUriFormat, bool isTransactional, TimeSpan? timeoutTimeSpan = null, TimeSpan? deferTimeSpan = null)
     {
         Guard.AgainstNull(services);
 
@@ -105,7 +105,7 @@ public class DeferredFixture : IntegrationFixture
         
         try
         {
-            var ignoreTillDate = DateTime.UtcNow.AddSeconds(1);
+            var ignoreTillDate = DateTime.UtcNow.Add(deferTimeSpan ?? TimeSpan.FromSeconds(1));
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
@@ -126,7 +126,7 @@ public class DeferredFixture : IntegrationFixture
 
             logger.LogInformation($"[start wait] : now = '{DateTime.Now}'");
 
-            var timeout = ignoreTillDate.AddMilliseconds(deferredMessageCount * millisecondsToDefer + millisecondsToDefer * 2 + 3000);
+            var timeout = ignoreTillDate.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(1));
             var timedOut = false;
 
             // wait for the message to be returned from the deferred queue
@@ -137,7 +137,7 @@ public class DeferredFixture : IntegrationFixture
                 timedOut = timeout < DateTime.UtcNow;
             }
 
-            logger.LogInformation($"[end wait] : now = '{DateTime.Now}' / timeout = '{timeout.ToLocalTime()}' / timed out = '{timedOut}'");
+            logger.LogInformation($"[end wait] : now = '{DateTime.Now}' / expiry = '{timeout}' / timed out = '{timedOut}'");
             logger.LogInformation($"{feature.NumberOfDeferredMessagesReturned} of {deferredMessageCount} deferred messages returned to the inbox.");
             logger.LogInformation($"{feature.NumberOfMessagesHandled} of {deferredMessageCount} deferred messages handled.");
 

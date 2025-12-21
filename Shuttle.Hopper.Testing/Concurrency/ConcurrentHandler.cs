@@ -3,7 +3,7 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Hopper.Testing;
 
-public class ConcurrentHandler(ILogger<ConcurrentHandler> logger) : IMessageHandler<ConcurrentCommand>
+public class ConcurrentHandler(ILogger<ConcurrentHandler> logger) : IDirectMessageHandler<ConcurrentCommand>
 {
     private readonly ILogger<ConcurrentHandler> _logger = Guard.AgainstNull(logger);
 

@@ -1,6 +1,6 @@
 namespace Shuttle.Hopper.Testing;
 
-public class ReceivePipelineHandler : IMessageHandler<ReceivePipelineCommand>
+public class ReceivePipelineHandler : IDirectMessageHandler<ReceivePipelineCommand>
 {
     public Task ProcessMessageAsync(ReceivePipelineCommand message, CancellationToken cancellationToken = default)
     {

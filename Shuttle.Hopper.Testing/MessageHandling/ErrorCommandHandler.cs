@@ -1,6 +1,6 @@
 namespace Shuttle.Hopper.Testing;
 
-public class ErrorCommandHandler : IMessageHandler<ErrorCommand>
+public class ErrorCommandHandler : IDirectMessageHandler<ErrorCommand>
 {
     public Task ProcessMessageAsync(ErrorCommand message, CancellationToken cancellationToken = default)
     {

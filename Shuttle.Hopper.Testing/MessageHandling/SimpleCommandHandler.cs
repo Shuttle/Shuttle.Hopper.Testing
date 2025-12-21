@@ -4,7 +4,7 @@ using System;
 
 namespace Shuttle.Hopper.Testing;
 
-public class SimpleCommandHandler(ILogger<SimpleCommandHandler> logger) : IMessageHandler<SimpleCommand>
+public class SimpleCommandHandler(ILogger<SimpleCommandHandler> logger) : IDirectMessageHandler<SimpleCommand>
 {
     private readonly ILogger<SimpleCommandHandler> _logger = Guard.AgainstNull(logger);
 

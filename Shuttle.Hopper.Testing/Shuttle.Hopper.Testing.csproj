@@ -7,12 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove=".package\**" />
-    <EmbeddedResource Remove=".package\**" />
-    <None Remove=".package\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="NUnit" Version="4.4.0" />
     <PackageReference Include="Shuttle.Core.Pipelines.Logging" Version="21.0.0" />

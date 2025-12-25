@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Shuttle.Core.Contract;
+using Shuttle.Core.Pipelines.Logging;
 using Shuttle.Hopper.Logging;
 
 namespace Shuttle.Hopper.Testing;
@@ -35,17 +36,13 @@ public static class ServiceCollectionExtensions
             services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider>(new FixtureFileLoggerProvider(Guard.AgainstEmpty(test))));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleLoggerProvider>());
 
-            services.AddServiceBusLogging(builder =>
-            {
-                builder.Options.QueueEvents = true;
-                builder.Options.TransportMessageDeferred = true;
-                builder.Options.Threading = true;
-            });
-
-            services.AddLogging(builder =>
-            {
-                builder.SetMinimumLevel(LogLevel.Trace);
-            });
+            services
+                .AddTransportEventLogging()
+                .AddPipelineLogging()
+                .AddLogging(builder =>
+                {
+                    builder.SetMinimumLevel(LogLevel.Trace);
+                });
 
             return services;
         }

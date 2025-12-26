@@ -7,7 +7,6 @@ using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
 using Shuttle.Core.Reflection;
 using Shuttle.Core.Serialization;
-using Shuttle.Core.Threading;
 using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Hopper.Testing;
@@ -80,8 +79,8 @@ public abstract class InboxFixture : IntegrationFixture
             {
                 WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
                 ErrorTransportUri = hasErrorTransport ? new(string.Format(transportUriFormat, "test-error")) : null,
-                DurationToSleepWhenIdle = [durationToSleepWhenIdle],
-                DurationToIgnoreOnFailure = [TimeSpan.FromMilliseconds(25)],
+                IdleDurations = [durationToSleepWhenIdle],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
                 ThreadCount = threadCount,
                 MaximumFailureCount = 0
             }
@@ -207,8 +206,8 @@ public abstract class InboxFixture : IntegrationFixture
             {
                 WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
                 ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
-                DurationToSleepWhenIdle = [TimeSpan.FromMilliseconds(5)],
-                DurationToIgnoreOnFailure = [TimeSpan.FromMilliseconds(5)],
+                IdleDurations = [TimeSpan.FromMilliseconds(5)],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
                 ThreadCount = 1
             }
         };
@@ -447,23 +446,6 @@ public abstract class InboxFixture : IntegrationFixture
         var transportService = serviceProvider.CreateTransportService();
         var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
         var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
-
-        var threadingOptions = serviceProvider.GetRequiredService<IOptions<ThreadingOptions>>();
-
-        List<int> executedThreads = [];
-
-        threadingOptions.Value.ProcessorExecuting += (eventArgs, _) =>
-        {
-            if (eventArgs.ProcessorThreadPool.Name.Equals("InboxThreadPool") && !executedThreads.Contains(eventArgs.ManagedThreadId))
-            {
-                logger.LogInformation($"[executing] : thread id = {eventArgs.ManagedThreadId} / name = '{eventArgs.ProcessorThread.Name}'");
-
-                executedThreads.Add(eventArgs.ManagedThreadId);
-            }
-
-            return Task.CompletedTask;
-        };
-
 
         var sw = new Stopwatch();
         var timedOut = false;

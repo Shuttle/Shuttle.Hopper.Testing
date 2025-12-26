@@ -15,8 +15,8 @@ public class PipelineExceptionFixture : IntegrationFixture
             Inbox = new()
             {
                 WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                DurationToSleepWhenIdle = [TimeSpan.FromMilliseconds(5)],
-                DurationToIgnoreOnFailure = [TimeSpan.FromMilliseconds(5)],
+                IdleDurations = [TimeSpan.FromMilliseconds(5)],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
                 MaximumFailureCount = 100,
                 ThreadCount = 1
             }

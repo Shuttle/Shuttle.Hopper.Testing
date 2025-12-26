@@ -25,8 +25,8 @@ public class BasicTransportFixture : IntegrationFixture
                 {
                     WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
                     ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
-                    DurationToSleepWhenIdle = [TimeSpan.FromMilliseconds(25)],
-                    DurationToIgnoreOnFailure = [TimeSpan.FromMilliseconds(25)],
+                    IdleDurations = [TimeSpan.FromMilliseconds(25)],
+                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
                     ThreadCount = threadCount
                 }
             };

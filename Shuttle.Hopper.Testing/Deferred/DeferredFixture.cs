@@ -47,8 +47,8 @@ public class DeferredFixture : IntegrationFixture
                     WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
                     DeferredTransportUri = new(string.Format(transportUriFormat, "test-inbox-deferred")),
                     ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
-                    DurationToSleepWhenIdle = [TimeSpan.FromMilliseconds(25)],
-                    DurationToIgnoreOnFailure = [TimeSpan.FromMilliseconds(25)],
+                    IdleDurations = [TimeSpan.FromMilliseconds(25)],
+                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
                     ThreadCount = threadCount,
                     DeferredMessageProcessorResetInterval = TimeSpan.FromMilliseconds(25),
                     DeferredMessageProcessorWaitInterval = TimeSpan.FromMilliseconds(25)

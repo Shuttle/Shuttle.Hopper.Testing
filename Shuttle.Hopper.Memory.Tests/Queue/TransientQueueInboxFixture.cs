@@ -9,9 +9,9 @@ public class TransientQueueInboxFixture : InboxFixture
     [TestCase(true, false)]
     [TestCase(false, true)]
     [TestCase(false, false)]
-    public async Task Should_be_able_handle_errors_async(bool hasErrorTransport, bool isTransactionalEndpoint)
+    public async Task Should_be_able_handle_errors_async(bool hasErrorTransport, bool isTransactional)
     {
-        await TestInboxErrorAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", hasErrorTransport, isTransactionalEndpoint);
+        await TestInboxErrorAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", hasErrorTransport, isTransactional);
     }
 
     [Test]
@@ -28,15 +28,15 @@ public class TransientQueueInboxFixture : InboxFixture
 
     [TestCase(250, false)]
     [TestCase(250, true)]
-    public async Task Should_be_able_to_process_messages_concurrently_async(int msToComplete, bool isTransactionalEndpoint)
+    public async Task Should_be_able_to_process_messages_concurrently_async(int msToComplete, bool isTransactional)
     {
-        await TestInboxConcurrencyAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", msToComplete, isTransactionalEndpoint);
+        await TestInboxConcurrencyAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", msToComplete, isTransactional);
     }
 
     [TestCase(100, true)]
     [TestCase(100, false)]
-    public async Task Should_be_able_to_process_queue_timeously_async(int count, bool isTransactionalEndpoint)
+    public async Task Should_be_able_to_process_queue_timeously_async(int count, bool isTransactional)
     {
-        await TestInboxThroughputAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", 1000, count, 5, isTransactionalEndpoint);
+        await TestInboxThroughputAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", 1000, count, 5, isTransactional);
     }
 }

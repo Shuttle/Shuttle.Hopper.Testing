@@ -142,13 +142,13 @@ public abstract class OutboxFixture : IntegrationFixture
 
             var receiverWorkQueue = await transportService.GetAsync(receiverWorkTransportUri);
             var timedOut = false;
-            var timeout = DateTime.Now.AddSeconds(150);
+            var timeout = DateTimeOffset.UtcNow.AddSeconds(150);
 
             while (outboxObserver.HandledMessageCount < count && !timedOut)
             {
                 await Task.Delay(25).ConfigureAwait(false);
 
-                timedOut = timeout < DateTime.Now;
+                timedOut = timeout < DateTimeOffset.UtcNow;
             }
 
             Assert.That(timedOut, Is.False, $"Timed out before processing {count} messages.");

@@ -51,7 +51,7 @@ public class DeferredFixture : IntegrationFixture
                     IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
                     ThreadCount = threadCount,
                     DeferredMessageProcessorResetInterval = TimeSpan.FromMilliseconds(25),
-                    DeferredMessageProcessorWaitInterval = TimeSpan.FromMilliseconds(25)
+                    DeferredMessageProcessorIdleDuration = TimeSpan.FromMilliseconds(25)
                 }
             };
             builder.SuppressHostedService();
@@ -105,7 +105,7 @@ public class DeferredFixture : IntegrationFixture
         
         try
         {
-            var ignoreTillDate = DateTime.UtcNow.Add(deferTimeSpan ?? TimeSpan.FromSeconds(1));
+            var ignoreTillDate = DateTimeOffset.UtcNow.Add(deferTimeSpan ?? TimeSpan.FromSeconds(1));
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
@@ -124,7 +124,7 @@ public class DeferredFixture : IntegrationFixture
                 ignoreTillDate = ignoreTillDate.AddMilliseconds(millisecondsToDefer);
             }
 
-            logger.LogInformation($"[start wait] : now = '{DateTime.Now}'");
+            logger.LogInformation($"[start wait] : now = '{DateTimeOffset.UtcNow}'");
 
             var timeout = ignoreTillDate.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(1));
             var timedOut = false;
@@ -134,10 +134,10 @@ public class DeferredFixture : IntegrationFixture
             {
                 await Task.Delay(millisecondsToDefer).ConfigureAwait(false);
 
-                timedOut = timeout < DateTime.UtcNow;
+                timedOut = timeout < DateTimeOffset.UtcNow;
             }
 
-            logger.LogInformation($"[end wait] : now = '{DateTime.Now}' / expiry = '{timeout}' / timed out = '{timedOut}'");
+            logger.LogInformation($"[end wait] : now = '{DateTimeOffset.UtcNow}' / expiry = '{timeout}' / timed out = '{timedOut}'");
             logger.LogInformation($"{feature.NumberOfDeferredMessagesReturned} of {deferredMessageCount} deferred messages returned to the inbox.");
             logger.LogInformation($"{feature.NumberOfMessagesHandled} of {deferredMessageCount} deferred messages handled.");
 

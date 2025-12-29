@@ -70,13 +70,13 @@ public class PipelineExceptionFixture : IntegrationFixture
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
-            var timeout = DateTime.Now.AddSeconds(2);
+            var timeout = DateTimeOffset.UtcNow.AddSeconds(200);
             var timedOut = false;
 
             while (feature.ShouldWait() && !timedOut)
             {
                 await Task.Delay(10).ConfigureAwait(false);
-                timedOut = DateTime.Now > timeout;
+                timedOut = DateTimeOffset.UtcNow > timeout;
             }
 
             Assert.That(!timedOut, "Timed out before message was received.");

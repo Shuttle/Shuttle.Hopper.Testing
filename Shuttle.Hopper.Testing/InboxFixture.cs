@@ -7,6 +7,7 @@ using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
 using Shuttle.Core.Reflection;
 using Shuttle.Core.Serialization;
+using Shuttle.Core.Threading;
 using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Hopper.Testing;
@@ -115,7 +116,7 @@ public abstract class InboxFixture : IntegrationFixture
         var logger = serviceProvider.GetLogger<InboxFixture>();
         var transportService = serviceProvider.CreateTransportService();
         var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
-        var serviceBusOptions = serviceProvider.GetRequiredService<IOptions<ServiceBusOptions>>();
+        var threadingOptions = serviceProvider.GetRequiredService<IOptions<ThreadingOptions>>();
         var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
 
         logger.LogInformation("[TestInboxConcurrency] : thread count = '{ThreadCount}'", threadCount);
@@ -125,31 +126,27 @@ public abstract class InboxFixture : IntegrationFixture
             await serviceBusConfiguration.ConfigureAsync();
             await ConfigureTransportsAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
 
-            var idlePipelines = new List<Guid>();
+            var managedThreadIds = new List<int>();
 
-            serviceBusOptions.Value.ThreadWorking += (eventArgs, _) =>
+            threadingOptions.Value.ProcessorExecuted += async (eventArgs, cancellationToken) =>
             {
-                logger.LogInformation("[TestInboxConcurrency] : pipeline = '{FullName}' / pipeline id '{PipelineId}' is performing work", eventArgs.Pipeline.GetType().FullName, eventArgs.Pipeline.Id);
-
-                return Task.CompletedTask;
-            };
-
-            serviceBusOptions.Value.ThreadWaiting += async (eventArgs, cancellationToken) =>
-            {
-                await semaphoreSlim.WaitAsync(cancellationToken);
-
-                try
+                if (eventArgs is { WorkPerformed: false, ServiceKey: "InboxProcessor" })
                 {
-                    if (!idlePipelines.Contains(eventArgs.Pipeline.Id))
+                    await semaphoreSlim.WaitAsync(cancellationToken);
+
+                    try
                     {
-                        logger.LogInformation($"[TestInboxConcurrency] : pipeline = '{eventArgs.Pipeline.GetType().FullName}' / pipeline id '{eventArgs.Pipeline.Id}' is idle");
+                        if (!managedThreadIds.Contains(eventArgs.ManagedThreadId))
+                        {
+                            logger.LogInformation($"[TestInboxConcurrency] : service key = '{eventArgs.ServiceKey}' / managed thread id {eventArgs.ManagedThreadId} is idle");
 
-                        idlePipelines.Add(eventArgs.Pipeline.Id);
+                            managedThreadIds.Add(eventArgs.ManagedThreadId);
+                        }
                     }
-                }
-                finally
-                {
-                    semaphoreSlim.Release();
+                    finally
+                    {
+                        semaphoreSlim.Release();
+                    }
                 }
             };
 
@@ -171,20 +168,20 @@ public abstract class InboxFixture : IntegrationFixture
                 await serviceBusConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
             }
 
-            var timeout = DateTime.Now.AddSeconds(5);
+            var timeout = DateTimeOffset.UtcNow.AddSeconds(5);
             var timedOut = false;
 
             logger.LogInformation($"[TestInboxConcurrency] : waiting till {timeout:O} for all pipelines to become idle");
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
-            while (idlePipelines.Count < threadCount && !timedOut)
+            while (managedThreadIds.Count < threadCount && !timedOut)
             {
                 await Task.Delay(30).ConfigureAwait(false);
-                timedOut = DateTime.Now >= timeout;
+                timedOut = DateTimeOffset.UtcNow >= timeout;
             }
 
-            Assert.That(timedOut, Is.False, $"[TIMEOUT] : All pipelines did not become idle before {timeout:O} / idle threads = {idlePipelines.Count}");
+            Assert.That(timedOut, Is.False, $"[TIMEOUT] : All pipelines did not become idle before {timeout:O} / idle threads = {managedThreadIds.Count}");
         }
         finally
         {
@@ -240,7 +237,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
-            var ignoreTillDate = DateTime.Now.Add(deferDurationValue);
+            var ignoreTillDate = DateTimeOffset.UtcNow.Add(deferDurationValue);
 
             var transportMessage = await serviceBus.SendAsync(new ReceivePipelineCommand(),
                 builder =>
@@ -256,13 +253,13 @@ public abstract class InboxFixture : IntegrationFixture
 
             var messageId = transportMessage.MessageId;
 
-            var timeout = DateTime.Now.Add(deferDurationValue.Multiply(2));
+            var timeout = DateTimeOffset.UtcNow.Add(deferDurationValue.Multiply(2));
             var timedOut = false;
 
             while (feature.TransportMessage == null && !timedOut)
             {
                 await Task.Delay(5).ConfigureAwait(false);
-                timedOut = DateTime.Now >= timeout;
+                timedOut = DateTimeOffset.UtcNow >= timeout;
             }
 
             Assert.That(timedOut, Is.False, "[TIMEOUT] : The deferred message was never received.");
@@ -326,13 +323,13 @@ public abstract class InboxFixture : IntegrationFixture
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
-            var timeout = DateTime.Now.AddSeconds(150);
+            var timeout = DateTimeOffset.UtcNow.AddSeconds(150);
             var timedOut = false;
 
             while (!inboxMessagePipelineObserver.HasReceivedPipelineException && !timedOut)
             {
                 await Task.Delay(25).ConfigureAwait(false);
-                timedOut = DateTime.Now > timeout;
+                timedOut = DateTimeOffset.UtcNow > timeout;
             }
 
             Assert.That(!timedOut, "Timed out before message was received.");
@@ -479,9 +476,9 @@ public abstract class InboxFixture : IntegrationFixture
 
             await serviceBus.StartAsync().ConfigureAwait(false);
 
-            logger.LogInformation($"[starting] : {DateTime.Now:HH:mm:ss.fff}");
+            logger.LogInformation($"[starting] : {DateTimeOffset.UtcNow:HH:mm:ss.fff}");
 
-            var timeout = DateTime.Now.AddSeconds(5);
+            var timeout = DateTimeOffset.UtcNow.AddSeconds(5);
 
             sw.Start();
 
@@ -489,12 +486,12 @@ public abstract class InboxFixture : IntegrationFixture
             {
                 await Task.Delay(25).ConfigureAwait(false);
 
-                timedOut = DateTime.Now > timeout;
+                timedOut = DateTimeOffset.UtcNow > timeout;
             }
 
             sw.Stop();
 
-            logger.LogInformation($"[stopped] : {DateTime.Now:HH:mm:ss.fff}");
+            logger.LogInformation($"[stopped] : {DateTimeOffset.UtcNow:HH:mm:ss.fff}");
 
             await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
         }

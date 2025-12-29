@@ -6,12 +6,12 @@ public class FixtureFileLogger : ILogger, IDisposable
 {
     private static readonly Lock Lock = new();
     private readonly StreamWriter _stream;
-    private DateTime _previousLogDateTime = DateTime.MinValue;
+    private DateTimeOffset _previousLogDateTime = DateTimeOffset.MinValue;
 
     public FixtureFileLogger(string name)
     {
         var folder = Path.Combine(AppContext.BaseDirectory, ".logs");
-        var path = Path.Combine(folder, $"{name}--{DateTime.Now:yyy-MM-dd--HH-mm-ss.fff}.log");
+        var path = Path.Combine(folder, $"{name}--{DateTimeOffset.UtcNow:yyy-MM-dd--HH-mm-ss.fff}.log");
 
         Console.WriteLine($"[FixtureFileLogger] : path = '{path}'");
 
@@ -32,9 +32,9 @@ public class FixtureFileLogger : ILogger, IDisposable
     {
         lock (Lock)
         {
-            var now = DateTime.Now;
+            var now = DateTimeOffset.UtcNow;
 
-            _stream.WriteLine($"{now:HH:mm:ss.fffffff} / {(_previousLogDateTime > DateTime.MinValue ? $"{now - _previousLogDateTime:fffffff}" : "0000000")} - {formatter(state, exception)}");
+            _stream.WriteLine($"{now:HH:mm:ss.fffffff} / {(_previousLogDateTime > DateTimeOffset.MinValue ? $"{now - _previousLogDateTime:fffffff}" : "0000000")} - {formatter(state, exception)}");
             _stream.Flush();
 
             _previousLogDateTime = now;

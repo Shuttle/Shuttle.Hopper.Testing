@@ -7,10 +7,10 @@ namespace Shuttle.Hopper.Testing;
 
 public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisposable
 {
-    private readonly List<DateTime> _datesAfterGetMessage = [];
+    private readonly List<DateTimeOffset> _datesAfterGetMessage = [];
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ILogger<InboxConcurrencyFeature> _logger;
-    private DateTime _firstDateAfterGetMessage = DateTime.MinValue;
+    private DateTimeOffset _firstMessageReceivedDate = DateTimeOffset.MinValue;
     private readonly PipelineOptions _pipelineOptions;
 
     public InboxConcurrencyFeature(ILogger<InboxConcurrencyFeature> logger, IOptions<PipelineOptions> pipelineOptions)
@@ -36,7 +36,7 @@ public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisp
     public bool AllMessagesReceivedWithinTimespan(int msToComplete)
     {
         return
-            _datesAfterGetMessage.All(dateTime => dateTime.Subtract(_firstDateAfterGetMessage) <=
+            _datesAfterGetMessage.All(dateTime => dateTime.Subtract(_firstMessageReceivedDate) <=
                                                   TimeSpan.FromMilliseconds(msToComplete));
     }
 
@@ -46,13 +46,13 @@ public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisp
 
         try
         {
-            var dateTime = DateTime.Now;
+            var dateTime = DateTimeOffset.UtcNow;
 
-            if (_firstDateAfterGetMessage == DateTime.MinValue)
+            if (_firstMessageReceivedDate == DateTimeOffset.MinValue)
             {
-                _firstDateAfterGetMessage = DateTime.Now;
+                _firstMessageReceivedDate = DateTimeOffset.UtcNow;
 
-                _logger.LogInformation("Offset date: {0:yyyy-MM-dd HH:mm:ss.fff}", _firstDateAfterGetMessage);
+                _logger.LogInformation("Offset date: {0:yyyy-MM-dd HH:mm:ss.fff}", _firstMessageReceivedDate);
             }
 
             _datesAfterGetMessage.Add(dateTime);

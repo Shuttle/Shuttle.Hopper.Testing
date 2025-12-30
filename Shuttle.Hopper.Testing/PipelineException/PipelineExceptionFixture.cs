@@ -10,7 +10,7 @@ public class PipelineExceptionFixture : IntegrationFixture
 {
     protected async Task TestExceptionHandlingAsync(IServiceCollection services, string transportUriFormat)
     {
-        var serviceBusOptions = new ServiceBusOptions
+        var hopperOptions = new HopperOptions
         {
             Inbox = new()
             {
@@ -22,10 +22,10 @@ public class PipelineExceptionFixture : IntegrationFixture
             }
         };
 
-        services.AddServiceBus(builder =>
+        services.AddHopper(builder =>
         {
-            builder.Options = serviceBusOptions;
-            builder.SuppressHostedService();
+            builder.Options = hopperOptions;
+            builder.SuppressServiceBusHostedService();
         });
 
         services.ConfigureLogging(nameof(PipelineExceptionFixture));

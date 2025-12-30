@@ -35,10 +35,13 @@ public class DeferredFixture : IntegrationFixture
 
         services.AddTransactionScope(builder =>
         {
-            builder.Options.Enabled = isTransactional;
+            builder.Configure(options =>
+            {
+                options.Enabled = isTransactional;
+            });
         });
 
-        services.AddServiceBus(builder =>
+        services.AddHopper(builder =>
         {
             builder.Options = new()
             {
@@ -54,7 +57,7 @@ public class DeferredFixture : IntegrationFixture
                     DeferredMessageProcessorIdleDuration = TimeSpan.FromMilliseconds(25)
                 }
             };
-            builder.SuppressHostedService();
+            builder.SuppressServiceBusHostedService();
         });
 
         services.ConfigureLogging(test);
@@ -84,19 +87,19 @@ public class DeferredFixture : IntegrationFixture
         var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
         var feature = serviceProvider.GetRequiredService<DeferredMessageFeature>();
         var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
-        var serviceBusOptions = serviceProvider.GetRequiredService<IOptions<ServiceBusOptions>>();
+        var hopperOptions = serviceProvider.GetRequiredService<IOptions<HopperOptions>>();
         var transportService = serviceProvider.CreateTransportService();
 
         await ConfigureTransportsAsync(transportService, transportUriFormat).ConfigureAwait(false);
 
-        serviceBusOptions.Value.DeferredMessageProcessingHalted += (args, _) =>
+        hopperOptions.Value.DeferredMessageProcessingHalted += (args, _) =>
         {
             logger.LogDebug($"[DeferredMessageProcessingHalted] : restart date/time = '{args.RestartDateTime}'");
 
             return Task.CompletedTask;
         };
 
-        serviceBusOptions.Value.DeferredMessageProcessingAdjusted += (args, _) =>
+        hopperOptions.Value.DeferredMessageProcessingAdjusted += (args, _) =>
         {
             logger.LogDebug($"[DeferredMessageProcessingAdjusted] : next processing date/time = '{args.NextProcessingDateTime}'");
 

@@ -3,64 +3,64 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Hopper.Testing;
 
-public static class ServiceBusOptionsExtensions
+public static class HopperOptionsExtensions
 {
-    extension(ServiceBusOptions serviceBusOptions)
+    extension(HopperOptions hopperOptions)
     {
         public void AddTransportEvents(ILogger logger)
         {
-            Guard.AgainstNull(serviceBusOptions);
+            Guard.AgainstNull(hopperOptions);
 
-            serviceBusOptions.TransportCreated += (eventArgs, _) =>
+            hopperOptions.TransportCreated += (eventArgs, _) =>
             {
                 logger.LogInformation("[TransportCreated] : queue = '{TransportName}'", eventArgs.Transport.Uri.TransportName);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.TransportDisposing += (eventArgs, _) =>
+            hopperOptions.TransportDisposing += (eventArgs, _) =>
             {
                 logger.LogInformation("[TransportDisposing] : queue = '{TransportName}'", eventArgs.Transport.Uri.TransportName);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.TransportDisposed += (eventArgs, _) =>
+            hopperOptions.TransportDisposed += (eventArgs, _) =>
             {
                 logger.LogInformation("[TransportDisposed] : queue = '{TransportName}'", eventArgs.Transport.Uri.TransportName);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.MessageAcknowledged += (eventArgs, _) =>
+            hopperOptions.MessageAcknowledged += (eventArgs, _) =>
             {
                 logger.LogInformation("[{Scheme}.MessageAcknowledged] : queue = '{TransportName}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.MessageSent += (eventArgs, _) =>
+            hopperOptions.MessageSent += (eventArgs, _) =>
             {
                 logger.LogInformation("[{Scheme}.MessageSent] : queue = '{TransportName}' / type = '{MessageType}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName, eventArgs.TransportMessage.MessageType);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.MessageReceived += (eventArgs, _) =>
+            hopperOptions.MessageReceived += (eventArgs, _) =>
             {
                 logger.LogInformation("[{Scheme}.MessageReceived] : queue = '{TransportName}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.MessageReleased += (eventArgs, _) =>
+            hopperOptions.MessageReleased += (eventArgs, _) =>
             {
                 logger.LogInformation("[{Scheme}.MessageReleased] : queue = '{TransportName}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName);
 
                 return Task.CompletedTask;
             };
 
-            serviceBusOptions.TransportOperation += (eventArgs, _) =>
+            hopperOptions.TransportOperation += (eventArgs, _) =>
             {
                 logger.LogInformation("[{Scheme}.Operation] : queue = '{TransportName}' / operation = '{Operation}'", eventArgs.Transport.Uri.Uri.Scheme, eventArgs.Transport.Uri.TransportName, eventArgs.Operation);
 

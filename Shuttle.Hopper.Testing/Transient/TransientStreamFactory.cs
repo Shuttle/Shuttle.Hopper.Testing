@@ -3,11 +3,11 @@ using Microsoft.Extensions.Options;
 
 namespace Shuttle.Hopper.Testing;
 
-public class TransientStreamFactory(IOptions<ServiceBusOptions> serviceBusOptions) : ITransportFactory
+public class TransientStreamFactory(IOptions<HopperOptions> hopperOptions) : ITransportFactory
 {
-    public Task<ITransport> CreateAsync(Uri uri, CancellationToken cancellationToken = new CancellationToken())
+    public Task<ITransport> CreateAsync(Uri uri, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<ITransport>(new TransientStream(Guard.AgainstNull(Guard.AgainstNull(serviceBusOptions).Value), Guard.AgainstNull(uri)));
+        return Task.FromResult<ITransport>(new TransientStream(Guard.AgainstNull(Guard.AgainstNull(hopperOptions).Value), Guard.AgainstNull(uri)));
     }
 
     public string Scheme => TransientStream.Scheme;

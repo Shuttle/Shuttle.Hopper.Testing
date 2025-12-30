@@ -10,11 +10,11 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
     private static readonly SemaphoreSlim Lock = new(1, 1);
     private static readonly Dictionary<string, Dictionary<int, TransientMessage>> Queues = new();
     private static int _itemId;
-    private readonly ServiceBusOptions _serviceBusOptions;
+    private readonly HopperOptions _hopperOptions;
 
     private readonly List<int> _unacknowledgedMessageIds = [];
 
-    public TransientQueue(ServiceBusOptions serviceBusOptions, Uri uri)
+    public TransientQueue(HopperOptions hopperOptions, Uri uri)
     {
         Guard.AgainstNull(uri);
 
@@ -23,7 +23,7 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
             throw new InvalidSchemeException(Scheme, uri.ToString());
         }
 
-        _serviceBusOptions = Guard.AgainstNull(serviceBusOptions);
+        _hopperOptions = Guard.AgainstNull(hopperOptions);
 
         var builder = new UriBuilder(uri);
 
@@ -85,7 +85,7 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _serviceBusOptions.MessageAcknowledged.InvokeAsync(new(this, acknowledgementToken), cancellationToken);
+        await _hopperOptions.MessageAcknowledged.InvokeAsync(new(this, acknowledgementToken), cancellationToken);
     }
 
     public async Task<ReceivedMessage?> ReceiveAsync(CancellationToken cancellationToken = default)
@@ -131,7 +131,7 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
 
         if (result != null)
         {
-            await _serviceBusOptions.MessageReceived.InvokeAsync(new(this, result), cancellationToken);
+            await _hopperOptions.MessageReceived.InvokeAsync(new(this, result), cancellationToken);
         }
 
         return result;
@@ -168,7 +168,7 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _serviceBusOptions.MessageReleased.InvokeAsync(new(this, acknowledgementToken), cancellationToken);
+        await _hopperOptions.MessageReleased.InvokeAsync(new(this, acknowledgementToken), cancellationToken);
     }
 
     public async Task SendAsync(TransportMessage transportMessage, Stream stream, CancellationToken cancellationToken = default)
@@ -186,7 +186,7 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _serviceBusOptions.MessageSent.InvokeAsync(new(this, transportMessage, stream), cancellationToken);
+        await _hopperOptions.MessageSent.InvokeAsync(new(this, transportMessage, stream), cancellationToken);
     }
 
     public TransportType Type { get; } = TransportType.Queue;
@@ -194,7 +194,7 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
 
     public async Task CreateAsync(CancellationToken cancellationToken = default)
     {
-        await _serviceBusOptions.TransportOperation.InvokeAsync(new(this, "[create/starting]"), cancellationToken);
+        await _hopperOptions.TransportOperation.InvokeAsync(new(this, "[create/starting]"), cancellationToken);
 
         await Lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -210,12 +210,12 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _serviceBusOptions.TransportOperation.InvokeAsync(new(this, "[create/completed]"), cancellationToken);
+        await _hopperOptions.TransportOperation.InvokeAsync(new(this, "[create/completed]"), cancellationToken);
     }
 
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
-        await _serviceBusOptions.TransportOperation.InvokeAsync(new(this, "[purge/starting]"), cancellationToken);
+        await _hopperOptions.TransportOperation.InvokeAsync(new(this, "[purge/starting]"), cancellationToken);
 
         await Lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -228,6 +228,6 @@ public class TransientQueue : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _serviceBusOptions.TransportOperation.InvokeAsync(new(this, "[purge/completed]"), cancellationToken);
+        await _hopperOptions.TransportOperation.InvokeAsync(new(this, "[purge/completed]"), cancellationToken);
     }
 }

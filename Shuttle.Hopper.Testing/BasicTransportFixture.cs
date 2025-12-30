@@ -14,10 +14,13 @@ public class BasicTransportFixture : IntegrationFixture
 
         services.AddTransactionScope(builder =>
         {
-            builder.Options.Enabled = isTransactional;
+            builder.Configure(options =>
+            {
+                options.Enabled = isTransactional;
+            });
         });
 
-        services.AddServiceBus(builder =>
+        services.AddHopper(builder =>
         {
             builder.Options = new()
             {

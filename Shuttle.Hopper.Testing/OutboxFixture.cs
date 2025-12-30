@@ -75,7 +75,10 @@ public abstract class OutboxFixture : IntegrationFixture
 
         services.AddTransactionScope(builder =>
         {
-            builder.Options.Enabled = isTransactional;
+            builder.Configure(options =>
+            {
+                options.Enabled = isTransactional;
+            });
         });
 
         var workTransportUri = string.Format(workTransportUriFormat, "test-outbox-work");
@@ -86,7 +89,7 @@ public abstract class OutboxFixture : IntegrationFixture
 
         services.AddSingleton(messageRouteProvider.Object);
 
-        services.AddServiceBus(builder =>
+        services.AddHopper(builder =>
         {
             builder.Options = new()
             {
@@ -99,7 +102,7 @@ public abstract class OutboxFixture : IntegrationFixture
                     }
             };
 
-            builder.SuppressHostedService();
+            builder.SuppressServiceBusHostedService();
         });
 
         services.ConfigureLogging(nameof(OutboxFixture));

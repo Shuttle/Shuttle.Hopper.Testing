@@ -71,10 +71,13 @@ public abstract class InboxFixture : IntegrationFixture
 
         services.AddTransactionScope(builder =>
         {
-            builder.Options.Enabled = isTransactional;
+            builder.Configure(options =>
+            {
+                options.Enabled = isTransactional;
+            });
         });
 
-        var serviceBusOptions = new ServiceBusOptions
+        var hopperOptions = new HopperOptions
         {
             Inbox = new()
             {
@@ -87,10 +90,10 @@ public abstract class InboxFixture : IntegrationFixture
             }
         };
 
-        services.AddServiceBus(builder =>
+        services.AddHopper(builder =>
         {
-            builder.Options = serviceBusOptions;
-            builder.SuppressHostedService();
+            builder.Options = hopperOptions;
+            builder.SuppressServiceBusHostedService();
         });
 
         services.ConfigureLogging(test);
@@ -197,7 +200,7 @@ public abstract class InboxFixture : IntegrationFixture
 
     protected async Task TestInboxDeferredAsync(IServiceCollection services, string transportUriFormat, TimeSpan deferDuration = default)
     {
-        var serviceBusOptions = new ServiceBusOptions
+        var hopperOptions = new HopperOptions
         {
             Inbox = new()
             {
@@ -211,10 +214,10 @@ public abstract class InboxFixture : IntegrationFixture
 
         services.AddSingleton<InboxDeferredFeature>();
 
-        services.AddServiceBus(builder =>
+        services.AddHopper(builder =>
         {
-            builder.Options = serviceBusOptions;
-            builder.SuppressHostedService();
+            builder.Options = hopperOptions;
+            builder.SuppressServiceBusHostedService();
         });
 
         services.ConfigureLogging(nameof(TestInboxDeferredAsync));
@@ -360,9 +363,9 @@ public abstract class InboxFixture : IntegrationFixture
         expiryDuration ??= TimeSpan.FromMilliseconds(500);
 
         services
-            .AddServiceBus(builder =>
+            .AddHopper(builder =>
             {
-                builder.SuppressHostedService();
+                builder.SuppressServiceBusHostedService();
             })
             .ConfigureLogging(nameof(TestInboxExpiryAsync));
 

@@ -4,7 +4,6 @@ using NUnit.Framework;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
 using Shuttle.Core.Reflection;
-using Shuttle.Core.Threading;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -21,20 +20,17 @@ public class ReceivePipelineExceptionFeature :
     private readonly ILogger<ReceivePipelineExceptionFeature> _logger;
     private readonly PipelineOptions _pipelineOptions;
     private readonly IServiceBusConfiguration _serviceBusConfiguration;
-    private readonly ThreadingOptions _threadingOptions;
     private string _assertionName = string.Empty;
     private volatile bool _failed;
 
-    public ReceivePipelineExceptionFeature(ILogger<ReceivePipelineExceptionFeature> logger, IOptions<ThreadingOptions> threadingOptions, IOptions<PipelineOptions> pipelineOptions, IServiceBusConfiguration serviceBusConfiguration)
+    public ReceivePipelineExceptionFeature(ILogger<ReceivePipelineExceptionFeature> logger, IOptions<PipelineOptions> pipelineOptions, IServiceBusConfiguration serviceBusConfiguration)
     {
         _logger = Guard.AgainstNull(logger);
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
-        _threadingOptions = Guard.AgainstNull(Guard.AgainstNull(threadingOptions).Value);
         _serviceBusConfiguration = Guard.AgainstNull(serviceBusConfiguration);
 
+        _pipelineOptions.PipelineAborted += PipelineAborted;
         _pipelineOptions.PipelineCreated += PipelineCreated;
-
-        _threadingOptions.ProcessorExecuted += ProcessorExecuted;
 
         AddAssertion("ReceiveMessage");
         AddAssertion("MessageReceived");
@@ -42,10 +38,55 @@ public class ReceivePipelineExceptionFeature :
         AddAssertion("TransportMessageDeserialized");
     }
 
+    private async Task PipelineAborted(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(_assertionName))
+        {
+            return;
+        }
+
+        await Lock.WaitAsync(cancellationToken);
+
+        try
+        {
+            var assertion = Guard.AgainstNull(GetAssertion(_assertionName));
+
+            if (assertion.HasRun)
+            {
+                return;
+            }
+
+            _logger.LogInformation($"[ReceivePipelineExceptionModule:Invoking] : assertion = '{assertion.Name}'.");
+
+            try
+            {
+                var receivedMessage = await _serviceBusConfiguration.Inbox!.WorkTransport!.ReceiveAsync(cancellationToken);
+
+                Assert.That(receivedMessage, Is.Not.Null);
+
+                await _serviceBusConfiguration.Inbox.WorkTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogInformation(ex.AllMessages());
+
+                _failed = true;
+            }
+
+            assertion.MarkAsRun();
+
+            _logger.LogInformation("[ReceivePipelineExceptionModule:Invoked] : assertion = '{AssertionName}'.", assertion.Name);
+        }
+        finally
+        {
+            Lock.Release();
+        }
+    }
+
     public void Dispose()
     {
+        _pipelineOptions.PipelineAborted -= PipelineAborted;
         _pipelineOptions.PipelineCreated -= PipelineCreated;
-        _threadingOptions.ProcessorExecuted -= ProcessorExecuted;
     }
 
     public async Task ExecuteAsync(IPipelineContext<DeserializeTransportMessage> pipelineContext, CancellationToken cancellationToken = default)
@@ -105,51 +146,6 @@ public class ReceivePipelineExceptionFeature :
         }
 
         return Task.CompletedTask;
-    }
-
-    private async Task ProcessorExecuted(ProcessorExecutedEventArgs eventArgs, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(_assertionName))
-        {
-            return;
-        }
-
-        await Lock.WaitAsync(cancellationToken);
-
-        try
-        {
-            var assertion = Guard.AgainstNull(GetAssertion(_assertionName));
-
-            if (assertion.HasRun)
-            {
-                return;
-            }
-
-            _logger.LogInformation($"[ReceivePipelineExceptionModule:Invoking] : assertion = '{assertion.Name}'.");
-
-            try
-            {
-                var receivedMessage = await _serviceBusConfiguration.Inbox!.WorkTransport!.ReceiveAsync(cancellationToken);
-
-                Assert.That(receivedMessage, Is.Not.Null);
-
-                await _serviceBusConfiguration.Inbox.WorkTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogInformation(ex.AllMessages());
-
-                _failed = true;
-            }
-
-            assertion.MarkAsRun();
-
-            _logger.LogInformation("[ReceivePipelineExceptionModule:Invoked] : assertion = '{AssertionName}'.", assertion.Name);
-        }
-        finally
-        {
-            Lock.Release();
-        }
     }
 
     public bool ShouldWait()

@@ -92,16 +92,16 @@ public class DeferredFixture : IntegrationFixture
 
         await ConfigureTransportsAsync(transportService, transportUriFormat).ConfigureAwait(false);
 
-        hopperOptions.Value.DeferredMessageProcessingHalted += (args, _) =>
+        hopperOptions.Value.DeferredMessageProcessingHalted += (eventArgs, _) =>
         {
-            logger.LogDebug($"[DeferredMessageProcessingHalted] : restart date/time = '{args.RestartDateTime}'");
+            logger.LogDebug($"[DeferredMessageProcessingHalted] : restart date/time = '{eventArgs.RestartAt}'");
 
             return Task.CompletedTask;
         };
 
-        hopperOptions.Value.DeferredMessageProcessingAdjusted += (args, _) =>
+        hopperOptions.Value.DeferredMessageProcessingAdjusted += (eventArgs, _) =>
         {
-            logger.LogDebug($"[DeferredMessageProcessingAdjusted] : next processing date/time = '{args.NextProcessingDateTime}'");
+            logger.LogDebug($"[DeferredMessageProcessingAdjusted] : next processing date/time = '{eventArgs.NextProcessingAt}'");
 
             return Task.CompletedTask;
         };
@@ -122,7 +122,7 @@ public class DeferredFixture : IntegrationFixture
 
                 var date = ignoreTillDate;
 
-                await serviceBus.SendAsync(command, builder => builder.Defer(date).WithRecipient(serviceBusConfiguration.Inbox!.WorkTransport!)).ConfigureAwait(false);
+                await serviceBus.SendAsync(command, builder => builder.DeferUntil(date).WithRecipient(serviceBusConfiguration.Inbox!.WorkTransport!)).ConfigureAwait(false);
 
                 ignoreTillDate = ignoreTillDate.AddMilliseconds(millisecondsToDefer);
             }

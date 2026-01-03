@@ -246,7 +246,7 @@ public abstract class InboxFixture : IntegrationFixture
                 builder =>
                 {
                     builder
-                        .Defer(ignoreTillDate)
+                        .DeferUntil(ignoreTillDate)
                         .WithRecipient(serviceBusConfiguration.Inbox!.WorkTransport!);
                 }).ConfigureAwait(false);
 
@@ -387,7 +387,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             void Builder(TransportMessageBuilder builder)
             {
-                builder.WillExpire(expiryDuration.Value);
+                builder.ExpiresIn(expiryDuration.Value);
                 builder.WithRecipient(transport);
             }
 

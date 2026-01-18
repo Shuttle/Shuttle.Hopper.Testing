@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
             services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleLoggerProvider>());
 
             services
-                .AddTransportEventLogging()
+                .AddHopperLogging()
                 .AddPipelineLogging()
                 .AddLogging(builder =>
                 {

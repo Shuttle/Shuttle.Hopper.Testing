@@ -12,8 +12,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="NUnit" Version="4.4.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="6.0.0" />
-    <PackageReference Include="Shuttle.Core.Threading.Logging" Version="21.0.0-alpha" />
-    <PackageReference Include="Shuttle.Core.Uris" Version="21.0.0-alpha" />
+    <PackageReference Include="Shuttle.Core.Threading.Logging" Version="21.0.1-beta" />
+    <PackageReference Include="Shuttle.Core.Uris" Version="21.0.1-beta" />
   </ItemGroup>
 
   <ItemGroup>

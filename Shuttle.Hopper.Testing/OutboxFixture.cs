@@ -102,7 +102,7 @@ public abstract class OutboxFixture : IntegrationFixture
                     }
             };
 
-            builder.SuppressServiceBusHostedService();
+            builder.SuppressBusHostedService();
         });
 
         services.ConfigureLogging(nameof(OutboxFixture));
@@ -130,17 +130,18 @@ public abstract class OutboxFixture : IntegrationFixture
 
         logger.LogInformation("Sending {0} messages.", count);
 
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
+        var bus = serviceProvider.GetRequiredService<IBus>();
 
         try
         {
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             var command = new SimpleCommand { Context = "TestOutboxSending" };
 
             for (var i = 0; i < count; i++)
             {
-                await serviceBus.SendAsync(command).ConfigureAwait(false);
+                await bus.SendAsync(command).ConfigureAwait(false);
             }
 
             var receiverWorkQueue = await transportService.GetAsync(receiverWorkTransportUri);
@@ -170,7 +171,7 @@ public abstract class OutboxFixture : IntegrationFixture
         }
         finally
         {
-            await serviceBus.DisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
         }
 
         await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);

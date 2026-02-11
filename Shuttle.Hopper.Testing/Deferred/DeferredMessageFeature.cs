@@ -69,9 +69,11 @@ public class DeferredMessageFeature :
 
     public async Task ExecuteAsync(IPipelineContext<DeferredMessageProcessed> pipelineContext, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation($"[DeferredMessageProcessed] : deferred message returned = '{pipelineContext.Pipeline.State.GetDeferredMessageReturned()}'");
+        var hasDeferredMessageReturned = pipelineContext.Pipeline.State.HasDeferredMessageReturned();
 
-        if (!pipelineContext.Pipeline.State.GetDeferredMessageReturned())
+        _logger.LogInformation($"[DeferredMessageProcessed] : deferred message returned = '{hasDeferredMessageReturned}'");
+
+        if (!hasDeferredMessageReturned)
         {
             return;
         }

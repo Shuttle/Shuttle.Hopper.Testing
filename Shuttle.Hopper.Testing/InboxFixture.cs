@@ -93,7 +93,7 @@ public abstract class InboxFixture : IntegrationFixture
         services.AddHopper(builder =>
         {
             builder.Options = hopperOptions;
-            builder.SuppressServiceBusHostedService();
+            builder.SuppressBusHostedService();
         });
 
         services.ConfigureLogging(test);
@@ -118,15 +118,15 @@ public abstract class InboxFixture : IntegrationFixture
         var feature = serviceProvider.GetRequiredService<InboxConcurrencyFeature>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
         var transportService = serviceProvider.CreateTransportService();
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
         var threadingOptions = serviceProvider.GetRequiredService<IOptions<ThreadingOptions>>();
-        var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
+        var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
 
         logger.LogInformation("[TestInboxConcurrency] : thread count = '{ThreadCount}'", threadCount);
 
         try
         {
-            await serviceBusConfiguration.ConfigureAsync();
+            await busConfiguration.ConfigureAsync();
             await ConfigureTransportsAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
 
             var managedThreadIds = new List<int>();
@@ -155,20 +155,20 @@ public abstract class InboxFixture : IntegrationFixture
 
             logger.LogInformation("[TestInboxConcurrency] : starting service bus");
 
-            Assert.That(serviceBusConfiguration.Inbox!.WorkTransport!.Type, Is.EqualTo(TransportType.Queue), "This test can only be run against queues.");
+            Assert.That(busConfiguration.Inbox!.WorkTransport!.Type, Is.EqualTo(TransportType.Queue), "This test can only be run against queues.");
 
             logger.LogInformation("[TestInboxConcurrency] : enqueuing '{ThreadCount}' messages", threadCount);
 
             for (var i = 0; i < threadCount; i++)
             {
-                await transportMessagePipeline.ExecuteAsync(new ConcurrentCommand { MessageIndex = i }, null, builder =>
+                await transportMessagePipeline.ExecuteAsync(new ConcurrentCommand { MessageIndex = i }, builder =>
                 {
-                    builder.WithRecipient(serviceBusConfiguration.Inbox.WorkTransport);
+                    builder.WithRecipient(busConfiguration.Inbox.WorkTransport);
                 }).ConfigureAwait(false);
 
                 var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-                await serviceBusConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+                await busConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
             }
 
             var timeout = DateTimeOffset.UtcNow.AddSeconds(5);
@@ -176,7 +176,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             logger.LogInformation($"[TestInboxConcurrency] : waiting till {timeout:O} for all pipelines to become idle");
 
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             while (managedThreadIds.Count < threadCount && !timedOut)
             {
@@ -188,7 +188,7 @@ public abstract class InboxFixture : IntegrationFixture
         }
         finally
         {
-            await serviceBus.DisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
             await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
             await transportService.TryDisposeAsync().ConfigureAwait(false);
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);
@@ -217,15 +217,16 @@ public abstract class InboxFixture : IntegrationFixture
         services.AddHopper(builder =>
         {
             builder.Options = hopperOptions;
-            builder.SuppressServiceBusHostedService();
+            builder.SuppressBusHostedService();
         });
 
         services.ConfigureLogging(nameof(TestInboxDeferredAsync));
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
-        var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
+        var bus = serviceProvider.GetRequiredService<IBus>();
+        var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
         var transportService = serviceProvider.CreateTransportService();
 
@@ -238,16 +239,16 @@ public abstract class InboxFixture : IntegrationFixture
             var feature = serviceProvider.GetRequiredService<InboxDeferredFeature>();
             var deferDurationValue = deferDuration == TimeSpan.Zero ? TimeSpan.FromMilliseconds(50) : deferDuration;
 
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             var ignoreTillDate = DateTimeOffset.UtcNow.Add(deferDurationValue);
 
-            var transportMessage = await serviceBus.SendAsync(new ReceivePipelineCommand(),
+            var transportMessage = await bus.SendAsync(new ReceivePipelineCommand(),
                 builder =>
                 {
                     builder
                         .DeferUntil(ignoreTillDate)
-                        .WithRecipient(serviceBusConfiguration.Inbox!.WorkTransport!);
+                        .WithRecipient(busConfiguration.Inbox!.WorkTransport!);
                 }).ConfigureAwait(false);
 
             Assert.That(transportMessage, Is.Not.Null);
@@ -272,7 +273,7 @@ public abstract class InboxFixture : IntegrationFixture
         }
         finally
         {
-            await serviceBus.TryDisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
             await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
             await transportService.TryDisposeAsync().ConfigureAwait(false);
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);
@@ -285,8 +286,8 @@ public abstract class InboxFixture : IntegrationFixture
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
-        var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
+        var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
         var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
         var pipelineOptions = serviceProvider.GetRequiredService<IOptions<PipelineOptions>>();
@@ -308,23 +309,23 @@ public abstract class InboxFixture : IntegrationFixture
 
         try
         {
-            await serviceBusConfiguration.ConfigureAsync();
+            await busConfiguration.ConfigureAsync();
             await ConfigureTransportsAsync(transportService, transportUriFormat, hasErrorTransport).ConfigureAwait(false);
 
-            await transportMessagePipeline.ExecuteAsync(new ErrorCommand(), null, builder =>
+            await transportMessagePipeline.ExecuteAsync(new ErrorCommand(), builder =>
             {
-                builder.WithRecipient(serviceBusConfiguration.Inbox!.WorkTransport!);
+                builder.WithRecipient(busConfiguration.Inbox!.WorkTransport!);
             }).ConfigureAwait(false);
 
             var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
             logger.LogInformation($"[enqueuing] : message id = '{transportMessage.MessageId}'");
 
-            await serviceBusConfiguration.Inbox!.WorkTransport!.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+            await busConfiguration.Inbox!.WorkTransport!.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
 
             logger.LogInformation($"[enqueued] : message id = '{transportMessage.MessageId}'");
 
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             var timeout = DateTimeOffset.UtcNow.AddSeconds(150);
             var timedOut = false;
@@ -337,7 +338,9 @@ public abstract class InboxFixture : IntegrationFixture
 
             Assert.That(!timedOut, "Timed out before message was received.");
 
-            await serviceBus.StopAsync().ConfigureAwait(false);
+            await busControl.StopAsync().ConfigureAwait(false);
+
+            await Task.Delay(1000); // wait for queue to catch up
 
             if (hasErrorTransport)
             {
@@ -351,7 +354,7 @@ public abstract class InboxFixture : IntegrationFixture
         }
         finally
         {
-            await serviceBus.DisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
             await transportService.DisposeAsync().ConfigureAwait(false);
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);
             await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
@@ -365,7 +368,7 @@ public abstract class InboxFixture : IntegrationFixture
         services
             .AddHopper(builder =>
             {
-                builder.SuppressServiceBusHostedService();
+                builder.SuppressBusHostedService();
             })
             .ConfigureLogging(nameof(TestInboxExpiryAsync));
 
@@ -391,7 +394,7 @@ public abstract class InboxFixture : IntegrationFixture
                 builder.WithRecipient(transport);
             }
 
-            await transportMessagePipeline.ExecuteAsync(new ReceivePipelineCommand(), null, Builder).ConfigureAwait(false);
+            await transportMessagePipeline.ExecuteAsync(new ReceivePipelineCommand(), Builder).ConfigureAwait(false);
 
             var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
@@ -444,31 +447,31 @@ public abstract class InboxFixture : IntegrationFixture
         var serializer = serviceProvider.GetRequiredService<ISerializer>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
         var transportService = serviceProvider.CreateTransportService();
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
-        var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
+        var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
 
         var sw = new Stopwatch();
         var timedOut = false;
 
         await ConfigureTransportsAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
-        await serviceBusConfiguration.ConfigureAsync();
+        await busConfiguration.ConfigureAsync();
 
         try
         {
-            logger.LogInformation($"Sending {messageCount} messages to input queue '{serviceBusConfiguration.Inbox!.WorkTransport!.Uri}'.");
+            logger.LogInformation($"Sending {messageCount} messages to input queue '{busConfiguration.Inbox!.WorkTransport!.Uri}'.");
 
             sw.Start();
 
             for (var i = 0; i < messageCount; i++)
             {
-                await transportMessagePipeline.ExecuteAsync(new SimpleCommand("command " + i) { Context = "TestInboxThroughput" }, null, builder =>
+                await transportMessagePipeline.ExecuteAsync(new SimpleCommand("command " + i) { Context = "TestInboxThroughput" }, builder =>
                 {
-                    builder.WithRecipient(serviceBusConfiguration.Inbox.WorkTransport);
+                    builder.WithRecipient(busConfiguration.Inbox.WorkTransport);
                 }).ConfigureAwait(false);
 
                 var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-                await serviceBusConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+                await busConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
             }
 
             sw.Stop();
@@ -477,7 +480,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             sw.Reset();
 
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             logger.LogInformation($"[starting] : {DateTimeOffset.UtcNow:HH:mm:ss.fff}");
 
@@ -500,7 +503,7 @@ public abstract class InboxFixture : IntegrationFixture
         }
         finally
         {
-            await serviceBus.DisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
             await transportService.TryDisposeAsync().ConfigureAwait(false);
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);
         }

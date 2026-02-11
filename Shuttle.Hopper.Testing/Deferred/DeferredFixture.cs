@@ -57,7 +57,7 @@ public class DeferredFixture : IntegrationFixture
                     DeferredMessageProcessorIdleDuration = TimeSpan.FromMilliseconds(25)
                 }
             };
-            builder.SuppressServiceBusHostedService();
+            builder.SuppressBusHostedService();
         });
 
         services.ConfigureLogging(test);
@@ -84,9 +84,10 @@ public class DeferredFixture : IntegrationFixture
         serviceProvider.GetRequiredService<DeferredMessageFeature>();
 
         var logger = serviceProvider.GetLogger<DeferredFixture>();
-        var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
+        var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
         var feature = serviceProvider.GetRequiredService<DeferredMessageFeature>();
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
+        var bus = serviceProvider.GetRequiredService<IBus>();
         var hopperOptions = serviceProvider.GetRequiredService<IOptions<HopperOptions>>();
         var transportService = serviceProvider.CreateTransportService();
 
@@ -110,7 +111,7 @@ public class DeferredFixture : IntegrationFixture
         {
             var ignoreTillDate = DateTimeOffset.UtcNow.Add(deferTimeSpan ?? TimeSpan.FromSeconds(1));
 
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             for (var i = 0; i < deferredMessageCount; i++)
             {
@@ -122,7 +123,7 @@ public class DeferredFixture : IntegrationFixture
 
                 var date = ignoreTillDate;
 
-                await serviceBus.SendAsync(command, builder => builder.DeferUntil(date).WithRecipient(serviceBusConfiguration.Inbox!.WorkTransport!)).ConfigureAwait(false);
+                await bus.SendAsync(command, builder => builder.DeferUntil(date).WithRecipient(busConfiguration.Inbox!.WorkTransport!)).ConfigureAwait(false);
 
                 ignoreTillDate = ignoreTillDate.AddMilliseconds(millisecondsToDefer);
             }
@@ -146,15 +147,15 @@ public class DeferredFixture : IntegrationFixture
 
             Assert.That(await feature.HasPendingDeferredMessagesAsync(), Is.False, "All the deferred messages were not handled.");
 
-            Assert.That(await serviceBusConfiguration.Inbox!.ErrorTransport!.HasPendingAsync().ConfigureAwait(false), Is.False);
-            Assert.That(await serviceBusConfiguration.Inbox!.DeferredTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
-            Assert.That(await serviceBusConfiguration.Inbox!.WorkTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            Assert.That(await busConfiguration.Inbox!.ErrorTransport!.HasPendingAsync().ConfigureAwait(false), Is.False);
+            Assert.That(await busConfiguration.Inbox!.DeferredTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            Assert.That(await busConfiguration.Inbox!.WorkTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
 
-            await serviceBus.StopAsync().ConfigureAwait(false);
+            await busControl.StopAsync().ConfigureAwait(false);
         }
         finally
         {
-            await serviceBus.DisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
             await transportService.TryDeleteTransportsAsync(transportUriFormat).ConfigureAwait(false);
             await transportService.TryDisposeAsync().ConfigureAwait(false);
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);

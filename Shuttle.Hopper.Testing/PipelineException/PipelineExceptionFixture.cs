@@ -25,7 +25,7 @@ public class PipelineExceptionFixture : IntegrationFixture
         services.AddHopper(builder =>
         {
             builder.Options = hopperOptions;
-            builder.SuppressServiceBusHostedService();
+            builder.SuppressBusHostedService();
         });
 
         services.ConfigureLogging(nameof(PipelineExceptionFixture));
@@ -34,14 +34,14 @@ public class PipelineExceptionFixture : IntegrationFixture
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
-        var serviceBus = serviceProvider.GetRequiredService<IServiceBus>();
-        var serviceBusConfiguration = serviceProvider.GetRequiredService<IServiceBusConfiguration>();
+        var busControl = serviceProvider.GetRequiredService<IBusControl>();
+        var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
 
-        await serviceBusConfiguration.ConfigureAsync();
+        await busConfiguration.ConfigureAsync();
 
-        var inboxWorkTransport = serviceBusConfiguration.Inbox!.WorkTransport!;
+        var inboxWorkTransport = busConfiguration.Inbox!.WorkTransport!;
 
-        if (serviceBusConfiguration.Inbox!.WorkTransport is IDeleteTransport delete)
+        if (busConfiguration.Inbox!.WorkTransport is IDeleteTransport delete)
         {
             await delete.DeleteAsync().ConfigureAwait(false);
         }
@@ -50,7 +50,7 @@ public class PipelineExceptionFixture : IntegrationFixture
             await inboxWorkTransport.TryPurgeAsync().ConfigureAwait(false);
         }
 
-        await serviceBusConfiguration.CreatePhysicalTransportsAsync().ConfigureAwait(false);
+        await busConfiguration.CreatePhysicalTransportsAsync().ConfigureAwait(false);
 
         var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
         var transportMessagePipeline = await pipelineFactory.GetPipelineAsync<TransportMessagePipeline>();
@@ -59,7 +59,7 @@ public class PipelineExceptionFixture : IntegrationFixture
 
         try
         {
-            await transportMessagePipeline.ExecuteAsync(new ReceivePipelineCommand(), null, builder =>
+            await transportMessagePipeline.ExecuteAsync(new ReceivePipelineCommand(), builder =>
             {
                 builder.WithRecipient(inboxWorkTransport);
             }).ConfigureAwait(false);
@@ -68,7 +68,7 @@ public class PipelineExceptionFixture : IntegrationFixture
 
             await inboxWorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
 
-            await serviceBus.StartAsync().ConfigureAwait(false);
+            await busControl.StartAsync().ConfigureAwait(false);
 
             var timeout = DateTimeOffset.UtcNow.AddSeconds(200);
             var timedOut = false;
@@ -83,7 +83,7 @@ public class PipelineExceptionFixture : IntegrationFixture
         }
         finally
         {
-            await serviceBus.TryDisposeAsync().ConfigureAwait(false);
+            await busControl.DisposeAsync().ConfigureAwait(false);
         }
 
         await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);

@@ -19,15 +19,15 @@ public class ReceivePipelineExceptionFeature :
     private readonly List<ExceptionAssertion> _assertions = [];
     private readonly ILogger<ReceivePipelineExceptionFeature> _logger;
     private readonly PipelineOptions _pipelineOptions;
-    private readonly IServiceBusConfiguration _serviceBusConfiguration;
+    private readonly IBusConfiguration _busConfiguration;
     private string _assertionName = string.Empty;
     private volatile bool _failed;
 
-    public ReceivePipelineExceptionFeature(ILogger<ReceivePipelineExceptionFeature> logger, IOptions<PipelineOptions> pipelineOptions, IServiceBusConfiguration serviceBusConfiguration)
+    public ReceivePipelineExceptionFeature(ILogger<ReceivePipelineExceptionFeature> logger, IOptions<PipelineOptions> pipelineOptions, IBusConfiguration busConfiguration)
     {
         _logger = Guard.AgainstNull(logger);
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
-        _serviceBusConfiguration = Guard.AgainstNull(serviceBusConfiguration);
+        _busConfiguration = Guard.AgainstNull(busConfiguration);
 
         _pipelineOptions.PipelineAborted += PipelineAborted;
         _pipelineOptions.PipelineCreated += PipelineCreated;
@@ -60,11 +60,11 @@ public class ReceivePipelineExceptionFeature :
 
             try
             {
-                var receivedMessage = await _serviceBusConfiguration.Inbox!.WorkTransport!.ReceiveAsync(cancellationToken);
+                var receivedMessage = await _busConfiguration.Inbox!.WorkTransport!.ReceiveAsync(cancellationToken);
 
                 Assert.That(receivedMessage, Is.Not.Null);
 
-                await _serviceBusConfiguration.Inbox.WorkTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, cancellationToken);
+                await _busConfiguration.Inbox.WorkTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, cancellationToken);
             }
             catch (Exception ex)
             {

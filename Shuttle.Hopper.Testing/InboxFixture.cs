@@ -340,8 +340,6 @@ public abstract class InboxFixture : IntegrationFixture
 
             await busControl.StopAsync().ConfigureAwait(false);
 
-            await Task.Delay(1000); // wait for queue to catch up
-
             if (hasErrorTransport)
             {
                 Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync().ConfigureAwait(false), Is.Null, "Should not have a message in queue 'test-inbox-work'.");

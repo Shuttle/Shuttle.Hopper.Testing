@@ -7,7 +7,7 @@ public class ConcurrentHandler(ILogger<ConcurrentHandler> logger) : IMessageHand
 {
     private readonly ILogger<ConcurrentHandler> _logger = Guard.AgainstNull(logger);
 
-    public async Task ProcessMessageAsync(ConcurrentCommand message, CancellationToken cancellationToken = default)
+    public async Task HandleAsync(ConcurrentCommand message, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation($"[ConcurrentHandler:ConcurrentCommand] : index = {message.MessageIndex}");
 

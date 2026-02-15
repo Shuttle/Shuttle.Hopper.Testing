@@ -2,8 +2,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Shuttle.Core.Contract;
-using Shuttle.Core.Pipelines.Logging;
-using Shuttle.Hopper.Logging;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -37,8 +35,6 @@ public static class ServiceCollectionExtensions
             services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleLoggerProvider>());
 
             services
-                .AddHopperLogging()
-                .AddPipelineLogging()
                 .AddLogging(builder =>
                 {
                     builder.SetMinimumLevel(LogLevel.Trace);

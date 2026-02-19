@@ -14,10 +14,10 @@ public class InboxDeferredFeature :
     {
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
         
-        _pipelineOptions.PipelineCreated += OnPipelineCreated;
+        _pipelineOptions.PipelineStarting += PipelineStarting;
     }
 
-    private Task OnPipelineCreated(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
+    private Task PipelineStarting(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
     {
         if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline))
         {
@@ -38,6 +38,6 @@ public class InboxDeferredFeature :
 
     public void Dispose()
     {
-        _pipelineOptions.PipelineCreated -= OnPipelineCreated;
+        _pipelineOptions.PipelineStarting -= PipelineStarting;
     }
 }

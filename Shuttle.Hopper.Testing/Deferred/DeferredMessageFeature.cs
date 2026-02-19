@@ -21,10 +21,10 @@ public class DeferredMessageFeature :
         _deferredMessageCount = Guard.AgainstNull(Guard.AgainstNull(messageCountOptions).Value).MessageCount;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
 
-        _pipelineOptions.PipelineCreated += PipelineCreated;
+        _pipelineOptions.PipelineStarting += PipelineStarting;
     }
 
-    private Task PipelineCreated(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
+    private Task PipelineStarting(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
     {
         if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline) || eventArgs.Pipeline.GetType() == typeof(DeferredMessagePipeline))
         {
@@ -92,6 +92,6 @@ public class DeferredMessageFeature :
 
     public void Dispose()
     {
-        _pipelineOptions.PipelineCreated -= PipelineCreated;
+        _pipelineOptions.PipelineStarting -= PipelineStarting;
     }
 }

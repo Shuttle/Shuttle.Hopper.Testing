@@ -30,7 +30,7 @@ public class ReceivePipelineExceptionFeature :
         _busConfiguration = Guard.AgainstNull(busConfiguration);
 
         _pipelineOptions.PipelineAborted += PipelineAborted;
-        _pipelineOptions.PipelineCreated += PipelineCreated;
+        _pipelineOptions.PipelineStarting += PipelineStarting;
 
         AddAssertion("ReceiveMessage");
         AddAssertion("MessageReceived");
@@ -86,7 +86,7 @@ public class ReceivePipelineExceptionFeature :
     public void Dispose()
     {
         _pipelineOptions.PipelineAborted -= PipelineAborted;
-        _pipelineOptions.PipelineCreated -= PipelineCreated;
+        _pipelineOptions.PipelineStarting -= PipelineStarting;
     }
 
     public async Task ExecuteAsync(IPipelineContext<DeserializeTransportMessage> pipelineContext, CancellationToken cancellationToken = default)
@@ -138,7 +138,7 @@ public class ReceivePipelineExceptionFeature :
         return _assertions.Find(item => item.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private Task PipelineCreated(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
+    private Task PipelineStarting(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
     {
         if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline))
         {

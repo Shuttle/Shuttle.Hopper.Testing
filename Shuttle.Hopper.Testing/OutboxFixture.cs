@@ -114,7 +114,7 @@ public abstract class OutboxFixture : IntegrationFixture
 
         var outboxObserver = new OutboxObserver();
 
-        pipelineOptions.Value.PipelineCreated += (eventArgs, _) => 
+        pipelineOptions.Value.PipelineStarting += (eventArgs, _) => 
         {
             if (eventArgs.Pipeline.GetType() == typeof(OutboxPipeline))
             {

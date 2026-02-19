@@ -18,10 +18,10 @@ public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisp
         _logger = Guard.AgainstNull(logger);
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
 
-        _pipelineOptions.PipelineCreated += OnPipelineCreate;
+        _pipelineOptions.PipelineStarting += PipelineStarting;
     }
 
-    private Task OnPipelineCreate(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
+    private Task PipelineStarting(PipelineEventArgs eventArgs, CancellationToken cancellationToken)
     {
         if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline))
         {
@@ -69,6 +69,6 @@ public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisp
 
     public void Dispose()
     {
-        _pipelineOptions.PipelineCreated -= OnPipelineCreate;
+        _pipelineOptions.PipelineStarting -= PipelineStarting;
     }
 }

@@ -52,8 +52,7 @@ public class PipelineExceptionFixture : IntegrationFixture
 
         await busConfiguration.CreatePhysicalTransportsAsync().ConfigureAwait(false);
 
-        var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
-        var transportMessagePipeline = await pipelineFactory.GetPipelineAsync<TransportMessagePipeline>();
+        var transportMessagePipeline = serviceProvider.GetRequiredService<ITransportMessagePipeline>();
         var feature = serviceProvider.GetRequiredService<ReceivePipelineExceptionFeature>();
         var serializer = serviceProvider.GetRequiredService<ISerializer>();
 

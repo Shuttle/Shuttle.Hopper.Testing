@@ -112,8 +112,7 @@ public abstract class InboxFixture : IntegrationFixture
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
-        var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
-        var transportMessagePipeline = await pipelineFactory.GetPipelineAsync<TransportMessagePipeline>();
+        var transportMessagePipeline = serviceProvider.GetRequiredService<ITransportMessagePipeline>();
         var serializer = serviceProvider.GetRequiredService<ISerializer>();
         var feature = serviceProvider.GetRequiredService<InboxConcurrencyFeature>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
@@ -289,15 +288,14 @@ public abstract class InboxFixture : IntegrationFixture
         var busControl = serviceProvider.GetRequiredService<IBusControl>();
         var busConfiguration = serviceProvider.GetRequiredService<IBusConfiguration>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
-        var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
         var pipelineOptions = serviceProvider.GetRequiredService<IOptions<PipelineOptions>>();
-        var transportMessagePipeline = await pipelineFactory.GetPipelineAsync<TransportMessagePipeline>();
+        var transportMessagePipeline = serviceProvider.GetRequiredService<ITransportMessagePipeline>();
         var serializer = serviceProvider.GetRequiredService<ISerializer>();
         var transportService = serviceProvider.CreateTransportService();
 
         var inboxMessagePipelineObserver = new InboxMessagePipelineObserver(logger);
 
-        pipelineOptions.Value.PipelineCreated += (eventArgs, _) =>
+        pipelineOptions.Value.PipelineStarting += (eventArgs, _) =>
         {
             if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline))
             {
@@ -372,8 +370,7 @@ public abstract class InboxFixture : IntegrationFixture
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
-        var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
-        var transportMessagePipeline = await pipelineFactory.GetPipelineAsync<TransportMessagePipeline>();
+        var transportMessagePipeline = serviceProvider.GetRequiredService<ITransportMessagePipeline>();
         var serializer = serviceProvider.GetRequiredService<ISerializer>();
 
         var transportService = serviceProvider.CreateTransportService();
@@ -426,12 +423,11 @@ public abstract class InboxFixture : IntegrationFixture
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
-        var pipelineFactory = serviceProvider.GetRequiredService<IPipelineFactory>();
         var pipelineOptions = serviceProvider.GetRequiredService<IOptions<PipelineOptions>>();
 
         var throughputObserver = new ThroughputObserver();
 
-        pipelineOptions.Value.PipelineCreated += (eventArgs, _) =>
+        pipelineOptions.Value.PipelineStarting += (eventArgs, _) =>
         {
             if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline))
             {
@@ -441,7 +437,7 @@ public abstract class InboxFixture : IntegrationFixture
             return Task.CompletedTask;
         };
 
-        var transportMessagePipeline = await pipelineFactory.GetPipelineAsync<TransportMessagePipeline>();
+        var transportMessagePipeline = serviceProvider.GetRequiredService<ITransportMessagePipeline>();
         var serializer = serviceProvider.GetRequiredService<ISerializer>();
         var logger = serviceProvider.GetLogger<InboxFixture>();
         var transportService = serviceProvider.CreateTransportService();

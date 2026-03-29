@@ -91,16 +91,15 @@ public abstract class OutboxFixture : IntegrationFixture
 
         services.AddHopper(builder =>
         {
-            builder.Options = new()
+            builder.Configure(options =>
             {
-                Outbox =
-                    new()
-                    {
-                        WorkTransportUri = new(workTransportUri),
-                        IdleDurations = [TimeSpan.FromMilliseconds(25)],
-                        ThreadCount = threadCount
-                    }
-            };
+                options.Outbox = new()
+                {
+                    WorkTransportUri = new(workTransportUri),
+                    IdleDurations = [TimeSpan.FromMilliseconds(25)],
+                    ThreadCount = threadCount
+                };
+            });
 
             builder.SuppressBusHostedService();
         });
@@ -114,7 +113,7 @@ public abstract class OutboxFixture : IntegrationFixture
 
         var outboxObserver = new OutboxObserver();
 
-        pipelineOptions.Value.PipelineStarting += (eventArgs, _) => 
+        pipelineOptions.Value.PipelineStarting += (eventArgs, _) =>
         {
             if (eventArgs.Pipeline.GetType() == typeof(OutboxPipeline))
             {

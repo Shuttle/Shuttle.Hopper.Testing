@@ -10,21 +10,19 @@ public class PipelineExceptionFixture : IntegrationFixture
 {
     protected async Task TestExceptionHandlingAsync(IServiceCollection services, string transportUriFormat)
     {
-        var hopperOptions = new HopperOptions
-        {
-            Inbox = new()
-            {
-                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                IdleDurations = [TimeSpan.FromMilliseconds(5)],
-                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
-                MaximumFailureCount = 100,
-                ThreadCount = 1
-            }
-        };
-
         services.AddHopper(builder =>
         {
-            builder.Options = hopperOptions;
+            builder.Configure(options =>
+            {
+                options.Inbox = new()
+                {
+                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                    IdleDurations = [TimeSpan.FromMilliseconds(5)],
+                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
+                    MaximumFailureCount = 100,
+                    ThreadCount = 1
+                };
+            });
             builder.SuppressBusHostedService();
         });
 

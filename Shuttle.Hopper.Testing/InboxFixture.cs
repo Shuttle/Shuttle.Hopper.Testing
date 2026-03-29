@@ -77,22 +77,20 @@ public abstract class InboxFixture : IntegrationFixture
             });
         });
 
-        var hopperOptions = new HopperOptions
-        {
-            Inbox = new()
-            {
-                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                ErrorTransportUri = hasErrorTransport ? new(string.Format(transportUriFormat, "test-error")) : null,
-                IdleDurations = [durationToSleepWhenIdle],
-                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
-                ThreadCount = threadCount,
-                MaximumFailureCount = 0
-            }
-        };
-
         services.AddHopper(builder =>
         {
-            builder.Options = hopperOptions;
+            builder.Configure(options =>
+            {
+                options.Inbox = new()
+                {
+                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                    ErrorTransportUri = hasErrorTransport ? new(string.Format(transportUriFormat, "test-error")) : null,
+                    IdleDurations = [durationToSleepWhenIdle],
+                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
+                    ThreadCount = threadCount,
+                    MaximumFailureCount = 0
+                };
+            });
             builder.SuppressBusHostedService();
         });
 
@@ -199,23 +197,21 @@ public abstract class InboxFixture : IntegrationFixture
 
     protected async Task TestInboxDeferredAsync(IServiceCollection services, string transportUriFormat, TimeSpan deferDuration = default)
     {
-        var hopperOptions = new HopperOptions
-        {
-            Inbox = new()
-            {
-                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
-                IdleDurations = [TimeSpan.FromMilliseconds(5)],
-                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
-                ThreadCount = 1
-            }
-        };
-
         services.AddSingleton<InboxDeferredFeature>();
 
         services.AddHopper(builder =>
         {
-            builder.Options = hopperOptions;
+            builder.Configure(options =>
+            {
+                options.Inbox = new()
+                {
+                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                    ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
+                    IdleDurations = [TimeSpan.FromMilliseconds(5)],
+                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
+                    ThreadCount = 1
+                };
+            });
             builder.SuppressBusHostedService();
         });
 

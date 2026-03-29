@@ -43,9 +43,9 @@ public class DeferredFixture : IntegrationFixture
 
         services.AddHopper(builder =>
         {
-            builder.Options = new()
+            builder.Configure(options =>
             {
-                Inbox = new()
+                options.Inbox = new()
                 {
                     WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
                     DeferredTransportUri = new(string.Format(transportUriFormat, "test-inbox-deferred")),
@@ -55,8 +55,8 @@ public class DeferredFixture : IntegrationFixture
                     ThreadCount = threadCount,
                     DeferredMessageProcessorResetInterval = TimeSpan.FromMilliseconds(25),
                     DeferredMessageProcessorIdleDuration = TimeSpan.FromMilliseconds(25)
-                }
-            };
+                };
+            });
             builder.SuppressBusHostedService();
         });
 

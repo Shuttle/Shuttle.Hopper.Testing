@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using Shuttle.Core.Pipelines;
-using Shuttle.Core.Reflection;
 using Shuttle.Core.Serialization;
 
 namespace Shuttle.Hopper.Testing;
@@ -10,20 +8,18 @@ public class PipelineExceptionFixture : IntegrationFixture
 {
     protected async Task TestExceptionHandlingAsync(IServiceCollection services, string transportUriFormat)
     {
-        services.AddHopper(builder =>
+        services.AddHopper(options =>
         {
-            builder.Configure(options =>
+            options.Inbox = new()
             {
-                options.Inbox = new()
-                {
-                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                    IdleDurations = [TimeSpan.FromMilliseconds(5)],
-                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
-                    MaximumFailureCount = 100,
-                    ThreadCount = 1
-                };
-            });
-            builder.SuppressBusHostedService();
+                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                IdleDurations = [TimeSpan.FromMilliseconds(5)],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
+                MaximumFailureCount = 100,
+                ThreadCount = 1
+            };
+
+            options.AutoStart = false;
         });
 
         services.ConfigureLogging(nameof(PipelineExceptionFixture));

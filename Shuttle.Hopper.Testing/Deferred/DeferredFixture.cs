@@ -10,6 +10,39 @@ namespace Shuttle.Hopper.Testing;
 
 public class DeferredFixture : IntegrationFixture
 {
+    private void ConfigureServices(IServiceCollection services, string test, int threadCount, bool isTransactional, string transportUriFormat)
+    {
+        Guard.AgainstNull(services);
+
+        services.AddTransactionScope(builder =>
+        {
+            builder.Configure(options =>
+            {
+                options.Enabled = isTransactional;
+            });
+        });
+
+        services.AddHopper(options =>
+        {
+            options.Inbox = new()
+            {
+                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                DeferredTransportUri = new(string.Format(transportUriFormat, "test-inbox-deferred")),
+                ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
+                IdleDurations = [TimeSpan.FromMilliseconds(25)],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
+                ThreadCount = threadCount,
+                DeferredMessageProcessorResetInterval = TimeSpan.FromMilliseconds(25),
+                DeferredMessageProcessorIdleDuration = TimeSpan.FromMilliseconds(25)
+            };
+
+            options.AutoStart = false;
+        })
+        .AddMessageHandlers();
+
+        services.ConfigureLogging(test);
+    }
+
     private async Task ConfigureTransportsAsync(ITransportService transportService, string transportUriFormat)
     {
         var workTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"));
@@ -27,40 +60,6 @@ public class DeferredFixture : IntegrationFixture
         await errorTransport.TryDeleteAsync().ConfigureAwait(false);
         await errorTransport.TryCreateAsync().ConfigureAwait(false);
         await errorTransport.TryPurgeAsync().ConfigureAwait(false);
-    }
-
-    private void ConfigureServices(IServiceCollection services, string test, int threadCount, bool isTransactional, string transportUriFormat)
-    {
-        Guard.AgainstNull(services);
-
-        services.AddTransactionScope(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Enabled = isTransactional;
-            });
-        });
-
-        services.AddHopper(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Inbox = new()
-                {
-                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                    DeferredTransportUri = new(string.Format(transportUriFormat, "test-inbox-deferred")),
-                    ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
-                    IdleDurations = [TimeSpan.FromMilliseconds(25)],
-                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
-                    ThreadCount = threadCount,
-                    DeferredMessageProcessorResetInterval = TimeSpan.FromMilliseconds(25),
-                    DeferredMessageProcessorIdleDuration = TimeSpan.FromMilliseconds(25)
-                };
-            });
-            builder.SuppressBusHostedService();
-        });
-
-        services.ConfigureLogging(test);
     }
 
     protected async Task TestDeferredProcessingAsync(IServiceCollection services, string transportUriFormat, bool isTransactional, TimeSpan? timeoutTimeSpan = null, TimeSpan? deferTimeSpan = null)
@@ -106,7 +105,7 @@ public class DeferredFixture : IntegrationFixture
 
             return Task.CompletedTask;
         };
-        
+
         try
         {
             var ignoreTillDate = DateTimeOffset.UtcNow.Add(deferTimeSpan ?? TimeSpan.FromSeconds(1));

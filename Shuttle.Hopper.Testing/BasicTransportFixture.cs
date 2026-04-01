@@ -20,19 +20,16 @@ public class BasicTransportFixture : IntegrationFixture
             });
         });
 
-        services.AddHopper(builder =>
+        services.AddHopper(options =>
         {
-            builder.Configure(options =>
+            options.Inbox = new()
             {
-                options.Inbox = new()
-                {
-                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                    ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
-                    IdleDurations = [TimeSpan.FromMilliseconds(25)],
-                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
-                    ThreadCount = threadCount
-                };
-            });
+                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                ErrorTransportUri = new(string.Format(transportUriFormat, "test-error")),
+                IdleDurations = [TimeSpan.FromMilliseconds(25)],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
+                ThreadCount = threadCount
+            };
         });
 
         services.ConfigureLogging(test);

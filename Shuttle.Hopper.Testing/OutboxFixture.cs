@@ -89,19 +89,16 @@ public abstract class OutboxFixture : IntegrationFixture
 
         services.AddSingleton(messageRouteProvider.Object);
 
-        services.AddHopper(builder =>
+        services.AddHopper(options =>
         {
-            builder.Configure(options =>
+            options.Outbox = new()
             {
-                options.Outbox = new()
-                {
-                    WorkTransportUri = new(workTransportUri),
-                    IdleDurations = [TimeSpan.FromMilliseconds(25)],
-                    ThreadCount = threadCount
-                };
-            });
+                WorkTransportUri = new(workTransportUri),
+                IdleDurations = [TimeSpan.FromMilliseconds(25)],
+                ThreadCount = threadCount
+            };
 
-            builder.SuppressBusHostedService();
+            options.AutoStart = false;
         });
 
         services.ConfigureLogging(nameof(OutboxFixture));

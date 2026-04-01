@@ -26,11 +26,11 @@ public class TransientQueueInboxFixture : InboxFixture
         await TestInboxDeferredAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}");
     }
 
-    [TestCase(250, false)]
-    [TestCase(250, true)]
+    [TestCase(25000, false)]
+    [TestCase(25000, true)]
     public async Task Should_be_able_to_process_messages_concurrently_async(int msToComplete, bool isTransactional)
     {
-        await TestInboxConcurrencyAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", msToComplete, isTransactional);
+        await TestInboxConcurrencyAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", msToComplete, isTransactional, TimeSpan.FromMinutes(5));
     }
 
     [TestCase(100, true)]

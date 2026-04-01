@@ -51,6 +51,37 @@ public class InboxMessagePipelineObserver(ILogger<InboxFixture> logger) : IPipel
 
 public abstract class InboxFixture : IntegrationFixture
 {
+    private static void ConfigureServices(IServiceCollection services, string test, bool hasErrorTransport, int threadCount, bool isTransactional, string transportUriFormat, TimeSpan durationToSleepWhenIdle)
+    {
+        Guard.AgainstNull(services);
+
+        services.AddTransactionScope(builder =>
+        {
+            builder.Configure(options =>
+            {
+                options.Enabled = isTransactional;
+            });
+        });
+
+        services.AddHopper(options =>
+        {
+            options.Inbox = new()
+            {
+                WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
+                ErrorTransportUri = hasErrorTransport ? new(string.Format(transportUriFormat, "test-error")) : null,
+                IdleDurations = [durationToSleepWhenIdle],
+                IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
+                ThreadCount = threadCount,
+                MaximumFailureCount = 0
+            };
+
+            options.AutoStart = false;
+        })
+        .AddMessageHandlers();
+
+        services.ConfigureLogging(test);
+    }
+
     private static async Task ConfigureTransportsAsync(ITransportService transportService, string transportUriFormat, bool hasErrorTransport)
     {
         var workTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"));
@@ -65,40 +96,8 @@ public abstract class InboxFixture : IntegrationFixture
         await (errorTransport?.TryPurgeAsync() ?? ValueTask.FromResult(false)).ConfigureAwait(false);
     }
 
-    private static void ConfigureServices(IServiceCollection services, string test, bool hasErrorTransport, int threadCount, bool isTransactional, string transportUriFormat, TimeSpan durationToSleepWhenIdle)
-    {
-        Guard.AgainstNull(services);
-
-        services.AddTransactionScope(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Enabled = isTransactional;
-            });
-        });
-
-        services.AddHopper(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Inbox = new()
-                {
-                    WorkTransportUri = new(string.Format(transportUriFormat, "test-inbox-work")),
-                    ErrorTransportUri = hasErrorTransport ? new(string.Format(transportUriFormat, "test-error")) : null,
-                    IdleDurations = [durationToSleepWhenIdle],
-                    IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(25)],
-                    ThreadCount = threadCount,
-                    MaximumFailureCount = 0
-                };
-            });
-            builder.SuppressBusHostedService();
-        });
-
-        services.ConfigureLogging(test);
-    }
-
     // NOT APPLICABLE TO STREAMS
-    protected async Task TestInboxConcurrencyAsync(IServiceCollection services, string transportUriFormat, int msToComplete, bool isTransactional)
+    protected async Task TestInboxConcurrencyAsync(IServiceCollection services, string transportUriFormat, int msToComplete, bool isTransactional, TimeSpan? timeoutTimeSpan = null)
     {
         const int threadCount = 3;
 
@@ -168,7 +167,7 @@ public abstract class InboxFixture : IntegrationFixture
                 await busConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
             }
 
-            var timeout = DateTimeOffset.UtcNow.AddSeconds(5);
+            var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(5));
             var timedOut = false;
 
             logger.LogInformation($"[TestInboxConcurrency] : waiting till {timeout:O} for all pipelines to become idle");
@@ -199,9 +198,7 @@ public abstract class InboxFixture : IntegrationFixture
     {
         services.AddSingleton<InboxDeferredFeature>();
 
-        services.AddHopper(builder =>
-        {
-            builder.Configure(options =>
+        services.AddHopper(options =>
             {
                 options.Inbox = new()
                 {
@@ -211,9 +208,9 @@ public abstract class InboxFixture : IntegrationFixture
                     IgnoreOnFailureDurations = [TimeSpan.FromMilliseconds(5)],
                     ThreadCount = 1
                 };
+
+                options.AutoStart = false;
             });
-            builder.SuppressBusHostedService();
-        });
 
         services.ConfigureLogging(nameof(TestInboxDeferredAsync));
 
@@ -228,7 +225,7 @@ public abstract class InboxFixture : IntegrationFixture
         var messageType = Guard.AgainstEmpty(typeof(ReceivePipelineCommand).FullName);
 
         await ConfigureTransportsAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
-        
+
         try
         {
             var feature = serviceProvider.GetRequiredService<InboxDeferredFeature>();
@@ -358,10 +355,11 @@ public abstract class InboxFixture : IntegrationFixture
         expiryDuration ??= TimeSpan.FromMilliseconds(500);
 
         services
-            .AddHopper(builder =>
+            .AddHopper(options =>
             {
-                builder.SuppressBusHostedService();
+                options.AutoStart = false;
             })
+            .Services
             .ConfigureLogging(nameof(TestInboxExpiryAsync));
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);

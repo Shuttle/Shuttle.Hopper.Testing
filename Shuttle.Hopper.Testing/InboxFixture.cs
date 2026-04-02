@@ -272,7 +272,7 @@ public abstract class InboxFixture : IntegrationFixture
         }
     }
 
-    protected async Task TestInboxErrorAsync(IServiceCollection services, string transportUriFormat, bool hasErrorTransport, bool isTransactional)
+    protected async Task TestInboxErrorAsync(IServiceCollection services, string transportUriFormat, bool hasErrorTransport, bool isTransactional, TimeSpan? timeoutTimeSpan = null)
     {
         ConfigureServices(services, nameof(TestInboxErrorAsync), hasErrorTransport, 1, isTransactional, transportUriFormat, TimeSpan.FromMilliseconds(25));
 
@@ -292,7 +292,7 @@ public abstract class InboxFixture : IntegrationFixture
         {
             if (eventArgs.Pipeline.GetType() == typeof(InboxMessagePipeline))
             {
-                eventArgs.Pipeline.AddObserver(inboxMessagePipelineObserver);
+                eventArgs.Pipeline.AddObserver(inboxMessagePipelineObserver, ObserverPosition.End);
             }
 
             return Task.CompletedTask;
@@ -318,7 +318,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             await busControl.StartAsync().ConfigureAwait(false);
 
-            var timeout = DateTimeOffset.UtcNow.AddSeconds(150);
+            var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(5));
             var timedOut = false;
 
             while (!inboxMessagePipelineObserver.HasReceivedPipelineException && !timedOut)

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,6 +8,8 @@ using Shuttle.Core.Reflection;
 using Shuttle.Core.Serialization;
 using Shuttle.Core.Threading;
 using Shuttle.Core.TransactionScope;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -77,7 +78,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             options.AutoStart = false;
         })
-        .AddMessageHandlers();
+        .AddMessageHandlersFrom(Assembly.GetExecutingAssembly());
 
         services.ConfigureLogging(test);
     }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NUnit.Framework;
@@ -38,7 +39,7 @@ public class DeferredFixture : IntegrationFixture
 
             options.AutoStart = false;
         })
-        .AddMessageHandlers();
+        .AddMessageHandlersFrom(Assembly.GetExecutingAssembly());
 
         services.ConfigureLogging(test);
     }

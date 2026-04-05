@@ -5,10 +5,8 @@ namespace Shuttle.Hopper.Memory.Tests;
 
 public class TransientQueueOutboxFixture : OutboxFixture
 {
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task Should_be_able_to_use_outbox_async(bool isTransactional)
+    public async Task Should_be_able_to_use_outbox_async()
     {
-        await TestOutboxSendingAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", 3, isTransactional);
+        await TestOutboxSendingAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", 3);
     }
 }

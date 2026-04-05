@@ -2,23 +2,14 @@
 using NUnit.Framework;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
-using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Hopper.Testing;
 
 public class BasicTransportFixture : IntegrationFixture
 {
-    private void ConfigureServices(IServiceCollection services, string test, int threadCount, bool isTransactional, string transportUriFormat)
+    private void ConfigureServices(IServiceCollection services, string test, int threadCount, string transportUriFormat)
     {
         Guard.AgainstNull(services);
-
-        services.AddTransactionScope(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Enabled = isTransactional;
-            });
-        });
 
         services.AddHopper(options =>
         {
@@ -31,8 +22,6 @@ public class BasicTransportFixture : IntegrationFixture
                 ThreadCount = threadCount
             };
         });
-
-        services.ConfigureLogging(test);
     }
 
     private async Task<ITransport> CreateWorkTransportAsync(ITransportService transportService, string workTransportUriFormat, bool refresh)
@@ -51,7 +40,7 @@ public class BasicTransportFixture : IntegrationFixture
 
     protected async Task TestReleaseMessageAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestReleaseMessageAsync), 1, false, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), nameof(TestReleaseMessageAsync), 1, transportUriFormat);
 
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();
@@ -88,7 +77,7 @@ public class BasicTransportFixture : IntegrationFixture
 
     protected async Task TestSimpleSendAndReceiveAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestSimpleSendAndReceiveAsync), 1, false, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), nameof(TestSimpleSendAndReceiveAsync), 1, transportUriFormat);
 
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();
@@ -126,7 +115,7 @@ public class BasicTransportFixture : IntegrationFixture
 
     protected async Task TestUnacknowledgedMessageAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestUnacknowledgedMessageAsync), 1, false, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), nameof(TestUnacknowledgedMessageAsync), 1, transportUriFormat);
 
         var transportService = services.BuildServiceProvider().CreateTransportService();
 

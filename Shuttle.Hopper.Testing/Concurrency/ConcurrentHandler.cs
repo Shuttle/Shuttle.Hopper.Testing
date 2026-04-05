@@ -1,11 +1,12 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Hopper.Testing;
 
-public class ConcurrentHandler(ILogger<ConcurrentHandler> logger) : IMessageHandler<ConcurrentCommand>
+public class ConcurrentHandler(ILogger<ConcurrentHandler>? logger = null) : IMessageHandler<ConcurrentCommand>
 {
-    private readonly ILogger<ConcurrentHandler> _logger = Guard.AgainstNull(logger);
+    private readonly ILogger<ConcurrentHandler> _logger = logger ?? NullLogger<ConcurrentHandler>.Instance;
 
     public async Task HandleAsync(ConcurrentCommand message, CancellationToken cancellationToken = default)
     {

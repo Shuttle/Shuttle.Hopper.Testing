@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
@@ -15,11 +16,11 @@ public class DeferredMessageFeature :
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ILogger<DeferredMessageFeature> _logger;
 
-    public DeferredMessageFeature(ILogger<DeferredMessageFeature> logger, IOptions<MessageCountOptions> messageCountOptions, IOptions<PipelineOptions> pipelineOptions)
+    public DeferredMessageFeature(IOptions<MessageCountOptions> messageCountOptions, IOptions<PipelineOptions> pipelineOptions, ILogger<DeferredMessageFeature>? logger = null)
     {
-        _logger = Guard.AgainstNull(logger);
         _deferredMessageCount = Guard.AgainstNull(Guard.AgainstNull(messageCountOptions).Value).MessageCount;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
+        _logger = logger ?? NullLogger<DeferredMessageFeature>.Instance;
 
         _pipelineOptions.PipelineStarting += PipelineStarting;
     }

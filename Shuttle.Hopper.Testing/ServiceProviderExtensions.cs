@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 
@@ -23,12 +24,12 @@ public static class ServiceProviderExtensions
 
         public ILogger<T> GetLogger<T>()
         {
-            return Guard.AgainstNull(serviceProvider).GetRequiredService<ILoggerFactory>().CreateLogger<T>();
+            return Guard.AgainstNull(serviceProvider).GetService<ILoggerFactory>()?.CreateLogger<T>() ?? NullLogger<T>.Instance;
         }
 
         public ILogger GetLogger()
         {
-            return Guard.AgainstNull(serviceProvider).GetRequiredService<ILoggerFactory>().CreateLogger("Fixture");
+            return Guard.AgainstNull(serviceProvider).GetService<ILoggerFactory>()?.CreateLogger("Fixture") ?? NullLogger.Instance;
         }
 
         public async Task<IServiceProvider> StartHostedServicesAsync()

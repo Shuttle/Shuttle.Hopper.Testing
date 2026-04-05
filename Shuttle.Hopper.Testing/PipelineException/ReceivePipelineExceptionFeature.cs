@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using Shuttle.Core.Contract;
@@ -23,11 +24,11 @@ public class ReceivePipelineExceptionFeature :
     private string _assertionName = string.Empty;
     private volatile bool _failed;
 
-    public ReceivePipelineExceptionFeature(ILogger<ReceivePipelineExceptionFeature> logger, IOptions<PipelineOptions> pipelineOptions, IBusConfiguration busConfiguration)
+    public ReceivePipelineExceptionFeature(IOptions<PipelineOptions> pipelineOptions, IBusConfiguration busConfiguration, ILogger<ReceivePipelineExceptionFeature>? logger = null)
     {
-        _logger = Guard.AgainstNull(logger);
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
         _busConfiguration = Guard.AgainstNull(busConfiguration);
+        _logger = logger ?? NullLogger<ReceivePipelineExceptionFeature>.Instance;
 
         _pipelineOptions.PipelineAborted += PipelineAborted;
         _pipelineOptions.PipelineStarting += PipelineStarting;

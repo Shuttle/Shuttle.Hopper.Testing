@@ -1,12 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Shuttle.Core.Contract;
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Shuttle.Hopper.Testing;
 
-public class SimpleCommandHandler(ILogger<SimpleCommandHandler> logger) : IMessageHandler<SimpleCommand>
+public class SimpleCommandHandler(ILogger<SimpleCommandHandler>? logger = null) : IMessageHandler<SimpleCommand>
 {
-    private readonly ILogger<SimpleCommandHandler> _logger = Guard.AgainstNull(logger);
+    private readonly ILogger<SimpleCommandHandler> _logger = logger ?? NullLogger<SimpleCommandHandler>.Instance;
 
     public Task HandleAsync(SimpleCommand message, CancellationToken cancellationToken = default)
     {

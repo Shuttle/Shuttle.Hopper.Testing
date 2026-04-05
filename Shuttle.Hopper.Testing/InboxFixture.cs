@@ -7,9 +7,9 @@ using Shuttle.Core.Pipelines;
 using Shuttle.Core.Reflection;
 using Shuttle.Core.Serialization;
 using Shuttle.Core.Threading;
-using Shuttle.Core.TransactionScope;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -34,9 +34,9 @@ public class ThroughputObserver : IPipelineObserver<MessageAcknowledged>
     }
 }
 
-public class InboxMessagePipelineObserver(ILogger<InboxFixture> logger) : IPipelineObserver<PipelineFailed>
+public class InboxMessagePipelineObserver(ILogger<InboxFixture>? logger = null) : IPipelineObserver<PipelineFailed>
 {
-    private readonly ILogger<InboxFixture> _logger = Guard.AgainstNull(logger);
+    private readonly ILogger<InboxFixture> _logger = logger ?? NullLogger<InboxFixture>.Instance;
 
     public bool HasReceivedPipelineException { get; private set; }
 
@@ -52,17 +52,9 @@ public class InboxMessagePipelineObserver(ILogger<InboxFixture> logger) : IPipel
 
 public abstract class InboxFixture : IntegrationFixture
 {
-    private static void ConfigureServices(IServiceCollection services, string test, bool hasErrorTransport, int threadCount, bool isTransactional, string transportUriFormat, TimeSpan durationToSleepWhenIdle)
+    private static void ConfigureServices(IServiceCollection services, bool hasErrorTransport, int threadCount, string transportUriFormat, TimeSpan durationToSleepWhenIdle)
     {
         Guard.AgainstNull(services);
-
-        services.AddTransactionScope(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Enabled = isTransactional;
-            });
-        });
 
         services.AddHopper(options =>
         {
@@ -79,8 +71,6 @@ public abstract class InboxFixture : IntegrationFixture
             options.AutoStart = false;
         })
         .AddMessageHandlersFrom(Assembly.GetExecutingAssembly());
-
-        services.ConfigureLogging(test);
     }
 
     private static async Task ConfigureTransportsAsync(ITransportService transportService, string transportUriFormat, bool hasErrorTransport)
@@ -98,13 +88,13 @@ public abstract class InboxFixture : IntegrationFixture
     }
 
     // NOT APPLICABLE TO STREAMS
-    protected async Task TestInboxConcurrencyAsync(IServiceCollection services, string transportUriFormat, int msToComplete, bool isTransactional, TimeSpan? timeoutTimeSpan = null)
+    protected async Task TestInboxConcurrencyAsync(IServiceCollection services, string transportUriFormat, TimeSpan expectedCompletionTimeSpan, TimeSpan? timeoutTimeSpan = null)
     {
         const int threadCount = 3;
 
         var semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        ConfigureServices(services, nameof(TestInboxConcurrencyAsync), true, threadCount, isTransactional, transportUriFormat, TimeSpan.FromMilliseconds(25));
+        ConfigureServices(services, true, threadCount, transportUriFormat, TimeSpan.FromMilliseconds(25));
 
         services.AddSingleton<InboxConcurrencyFeature>();
 
@@ -168,7 +158,7 @@ public abstract class InboxFixture : IntegrationFixture
                 await busConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
             }
 
-            var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(5));
+            var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? expectedCompletionTimeSpan.Add(TimeSpan.FromSeconds(5)));
             var timedOut = false;
 
             logger.LogInformation($"[TestInboxConcurrency] : waiting till {timeout:O} for all pipelines to become idle");
@@ -192,7 +182,7 @@ public abstract class InboxFixture : IntegrationFixture
         }
 
         Assert.That(feature.OnAfterGetMessageCount, Is.EqualTo(threadCount), $"Got {feature.OnAfterGetMessageCount} messages but {threadCount} were sent.");
-        Assert.That(feature.AllMessagesReceivedWithinTimespan(msToComplete), Is.True, $"All dequeued messages have to be within {msToComplete} ms of first get message.");
+        Assert.That(feature.AllMessagesReceivedWithinTimespan(expectedCompletionTimeSpan), Is.True, $"All dequeued messages have to be within {expectedCompletionTimeSpan} ms of first get message.");
     }
 
     protected async Task TestInboxDeferredAsync(IServiceCollection services, string transportUriFormat, TimeSpan deferDuration = default)
@@ -212,8 +202,6 @@ public abstract class InboxFixture : IntegrationFixture
 
                 options.AutoStart = false;
             });
-
-        services.ConfigureLogging(nameof(TestInboxDeferredAsync));
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
@@ -273,9 +261,9 @@ public abstract class InboxFixture : IntegrationFixture
         }
     }
 
-    protected async Task TestInboxErrorAsync(IServiceCollection services, string transportUriFormat, bool hasErrorTransport, bool isTransactional, TimeSpan? timeoutTimeSpan = null)
+    protected async Task TestInboxErrorAsync(IServiceCollection services, string transportUriFormat, bool hasErrorTransport, TimeSpan? timeoutTimeSpan = null)
     {
-        ConfigureServices(services, nameof(TestInboxErrorAsync), hasErrorTransport, 1, isTransactional, transportUriFormat, TimeSpan.FromMilliseconds(25));
+        ConfigureServices(services, hasErrorTransport, 1, transportUriFormat, TimeSpan.FromMilliseconds(25));
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
@@ -359,9 +347,7 @@ public abstract class InboxFixture : IntegrationFixture
             .AddHopper(options =>
             {
                 options.AutoStart = false;
-            })
-            .Services
-            .ConfigureLogging(nameof(TestInboxExpiryAsync));
+            });
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
@@ -407,14 +393,21 @@ public abstract class InboxFixture : IntegrationFixture
         }
     }
 
-    protected async Task TestInboxThroughputAsync(IServiceCollection services, string transportUriFormat, int timeoutMilliseconds, int messageCount, int threadCount, bool isTransactional)
+    protected async Task TestInboxThroughputAsync(IServiceCollection services, string transportUriFormat, int messageCount, int threadCount, TimeSpan? timeoutTimeSpan = null)
     {
+        if (messageCount < 1)
+        {
+            messageCount = 1;
+        }
+
         if (threadCount < 1)
         {
             threadCount = 1;
         }
 
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestInboxThroughputAsync), true, threadCount, isTransactional, transportUriFormat, TimeSpan.FromMilliseconds(25));
+        var timeoutTimeSpanValue = timeoutTimeSpan ?? TimeSpan.FromMilliseconds(messageCount / threadCount * 50);
+
+        ConfigureServices(Guard.AgainstNull(services), true, threadCount, transportUriFormat, TimeSpan.FromMilliseconds(25));
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 
@@ -473,7 +466,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             logger.LogInformation($"[starting] : {DateTimeOffset.UtcNow:HH:mm:ss.fff}");
 
-            var timeout = DateTimeOffset.UtcNow.AddSeconds(5);
+            var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpanValue);
 
             sw.Start();
 
@@ -497,17 +490,13 @@ public abstract class InboxFixture : IntegrationFixture
             await serviceProvider.StopHostedServicesAsync().ConfigureAwait(false);
         }
 
-        var ms = sw.ElapsedMilliseconds;
-
         if (!timedOut)
         {
-            logger.LogInformation($"Processed {messageCount} messages in {ms} ms");
-
-            Assert.That(ms < timeoutMilliseconds, Is.True, $"Should be able to process at least {messageCount} messages in {timeoutMilliseconds} ms but it took {ms} ms.");
+            Assert.That(sw.Elapsed < timeoutTimeSpanValue, Is.True, $"Should be able to process at least {messageCount} messages in {timeoutTimeSpanValue} but it took {sw.Elapsed}.");
         }
         else
         {
-            Assert.Fail($"Timed out before processing {messageCount} messages.  Only processed {throughputObserver.HandledMessageCount} messages in {ms}.");
+            Assert.Fail($"Timed out before processing {messageCount} messages.  Only processed {throughputObserver.HandledMessageCount} messages in {sw.Elapsed}.");
         }
     }
 }

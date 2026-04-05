@@ -5,13 +5,11 @@ namespace Shuttle.Hopper.Memory.Tests;
 
 public class TransientQueueInboxFixture : InboxFixture
 {
-    [TestCase(true, true)]
-    [TestCase(true, false)]
-    [TestCase(false, true)]
-    [TestCase(false, false)]
-    public async Task Should_be_able_handle_errors_async(bool hasErrorTransport, bool isTransactional)
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task Should_be_able_handle_errors_async(bool hasErrorTransport)
     {
-        await TestInboxErrorAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", hasErrorTransport, isTransactional);
+        await TestInboxErrorAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", hasErrorTransport);
     }
 
     [Test]
@@ -26,17 +24,15 @@ public class TransientQueueInboxFixture : InboxFixture
         await TestInboxDeferredAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}");
     }
 
-    [TestCase(25000, false)]
-    [TestCase(25000, true)]
-    public async Task Should_be_able_to_process_messages_concurrently_async(int msToComplete, bool isTransactional)
+    [Test]
+    public async Task Should_be_able_to_process_messages_concurrently_async()
     {
-        await TestInboxConcurrencyAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", msToComplete, isTransactional, TimeSpan.FromMinutes(5));
+        await TestInboxConcurrencyAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", TimeSpan.FromSeconds(25), TimeSpan.FromSeconds(30));
     }
 
-    [TestCase(100, true)]
-    [TestCase(100, false)]
-    public async Task Should_be_able_to_process_queue_timeously_async(int count, bool isTransactional)
+    [Test]
+    public async Task Should_be_able_to_process_queue_timeously_async()
     {
-        await TestInboxThroughputAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", 1000, count, 5, isTransactional);
+        await TestInboxThroughputAsync(TransientQueueConfiguration.GetServiceCollection(), "transient-queue://./{0}", 1000, 5, TimeSpan.FromSeconds(5));
     }
 }

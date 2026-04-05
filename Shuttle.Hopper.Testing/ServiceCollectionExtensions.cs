@@ -27,11 +27,11 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection ConfigureLogging(string test)
+        public IServiceCollection ConfigureLogging(string testName)
         {
             Guard.AgainstNull(services);
 
-            services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider>(new FixtureFileLoggerProvider(Guard.AgainstEmpty(test))));
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider>(new FixtureFileLoggerProvider(Guard.AgainstEmpty(testName))));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleLoggerProvider>());
 
             services

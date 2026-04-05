@@ -22,8 +22,6 @@ public class PipelineExceptionFixture : IntegrationFixture
             options.AutoStart = false;
         });
 
-        services.ConfigureLogging(nameof(PipelineExceptionFixture));
-
         services.AddSingleton<ReceivePipelineExceptionFeature>();
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);

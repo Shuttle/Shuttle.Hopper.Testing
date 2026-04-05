@@ -6,7 +6,6 @@ using NUnit.Framework;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
 using Shuttle.Core.Reflection;
-using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -57,12 +56,12 @@ public abstract class OutboxFixture : IntegrationFixture
         await errorTransport.TryPurgeAsync().ConfigureAwait(false);
     }
 
-    protected async Task TestOutboxSendingAsync(IServiceCollection services, string workTransportUriFormat, int threadCount, bool isTransactional)
+    protected async Task TestOutboxSendingAsync(IServiceCollection services, string workTransportUriFormat, int threadCount)
     {
-        await TestOutboxSendingAsync(services, workTransportUriFormat, workTransportUriFormat, threadCount, isTransactional).ConfigureAwait(false);
+        await TestOutboxSendingAsync(services, workTransportUriFormat, workTransportUriFormat, threadCount).ConfigureAwait(false);
     }
 
-    protected async Task TestOutboxSendingAsync(IServiceCollection services, string workTransportUriFormat, string errorTransportUriFormat, int threadCount, bool isTransactional)
+    protected async Task TestOutboxSendingAsync(IServiceCollection services, string workTransportUriFormat, string errorTransportUriFormat, int threadCount)
     {
         Guard.AgainstNull(services);
 
@@ -72,14 +71,6 @@ public abstract class OutboxFixture : IntegrationFixture
         {
             threadCount = 1;
         }
-
-        services.AddTransactionScope(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Enabled = isTransactional;
-            });
-        });
 
         var workTransportUri = string.Format(workTransportUriFormat, "test-outbox-work");
         var receiverWorkTransportUri = string.Format(workTransportUriFormat, "test-receiver-work");
@@ -100,8 +91,6 @@ public abstract class OutboxFixture : IntegrationFixture
 
             options.AutoStart = false;
         });
-
-        services.ConfigureLogging(nameof(OutboxFixture));
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 

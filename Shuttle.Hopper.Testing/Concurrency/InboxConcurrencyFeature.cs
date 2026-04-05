@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Pipelines;
@@ -13,9 +14,9 @@ public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisp
     private DateTimeOffset _firstMessageReceivedDate = DateTimeOffset.MinValue;
     private readonly PipelineOptions _pipelineOptions;
 
-    public InboxConcurrencyFeature(ILogger<InboxConcurrencyFeature> logger, IOptions<PipelineOptions> pipelineOptions)
+    public InboxConcurrencyFeature(IOptions<PipelineOptions> pipelineOptions, ILogger<InboxConcurrencyFeature>? logger = null)
     {
-        _logger = Guard.AgainstNull(logger);
+        _logger = logger ?? NullLogger<InboxConcurrencyFeature>.Instance;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
 
         _pipelineOptions.PipelineStarting += PipelineStarting;
@@ -33,11 +34,9 @@ public class InboxConcurrencyFeature : IPipelineObserver<MessageReceived>, IDisp
 
     public int OnAfterGetMessageCount => _datesAfterGetMessage.Count;
 
-    public bool AllMessagesReceivedWithinTimespan(int msToComplete)
+    public bool AllMessagesReceivedWithinTimespan(TimeSpan expectedCompletionTimeSpan)
     {
-        return
-            _datesAfterGetMessage.All(dateTime => dateTime.Subtract(_firstMessageReceivedDate) <=
-                                                  TimeSpan.FromMilliseconds(msToComplete));
+        return _datesAfterGetMessage.All(dateTime => dateTime.Subtract(_firstMessageReceivedDate) <= expectedCompletionTimeSpan);
     }
 
     public async Task ExecuteAsync(IPipelineContext<MessageReceived> pipelineContext, CancellationToken cancellationToken = default)

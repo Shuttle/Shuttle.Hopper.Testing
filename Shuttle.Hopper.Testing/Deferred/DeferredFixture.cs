@@ -5,23 +5,14 @@ using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
-using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Hopper.Testing;
 
 public class DeferredFixture : IntegrationFixture
 {
-    private void ConfigureServices(IServiceCollection services, string test, int threadCount, bool isTransactional, string transportUriFormat)
+    private void ConfigureServices(IServiceCollection services, int threadCount, string transportUriFormat)
     {
         Guard.AgainstNull(services);
-
-        services.AddTransactionScope(builder =>
-        {
-            builder.Configure(options =>
-            {
-                options.Enabled = isTransactional;
-            });
-        });
 
         services.AddHopper(options =>
         {
@@ -40,8 +31,6 @@ public class DeferredFixture : IntegrationFixture
             options.AutoStart = false;
         })
         .AddMessageHandlersFrom(Assembly.GetExecutingAssembly());
-
-        services.ConfigureLogging(test);
     }
 
     private async Task ConfigureTransportsAsync(ITransportService transportService, string transportUriFormat)
@@ -63,7 +52,7 @@ public class DeferredFixture : IntegrationFixture
         await errorTransport.TryPurgeAsync().ConfigureAwait(false);
     }
 
-    protected async Task TestDeferredProcessingAsync(IServiceCollection services, string transportUriFormat, bool isTransactional, TimeSpan? timeoutTimeSpan = null, TimeSpan? deferTimeSpan = null)
+    protected async Task TestDeferredProcessingAsync(IServiceCollection services, string transportUriFormat, TimeSpan? timeoutTimeSpan = null, TimeSpan? deferTimeSpan = null)
     {
         Guard.AgainstNull(services);
 
@@ -77,7 +66,7 @@ public class DeferredFixture : IntegrationFixture
 
         services.AddSingleton<DeferredMessageFeature>();
 
-        ConfigureServices(services, nameof(TestDeferredProcessingAsync), 1, isTransactional, transportUriFormat);
+        ConfigureServices(services, 1, transportUriFormat);
 
         var serviceProvider = await services.BuildServiceProvider().StartHostedServicesAsync().ConfigureAwait(false);
 

@@ -1,4 +1,5 @@
 using Shuttle.Core.Contract;
+using Shuttle.Core.Pipelines;
 using Shuttle.Core.Streams;
 
 namespace Shuttle.Hopper.Testing;
@@ -104,7 +105,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    public async Task SendAsync(TransportMessage transportMessage, Stream stream, CancellationToken cancellationToken = default)
+    public async Task SendAsync(Stream stream, IState state, CancellationToken cancellationToken = default)
     {
         await Lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -112,14 +113,14 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
         {
             _itemId++;
 
-            Queues[Uri.ToString()].Add(_itemId, new(_itemId, transportMessage, await stream.CopyAsync().ConfigureAwait(false)));
+            Queues[Uri.ToString()].Add(_itemId, new(_itemId, Guard.AgainstNull(state.GetTransportMessage()), await stream.CopyAsync().ConfigureAwait(false)));
         }
         finally
         {
             Lock.Release();
         }
 
-        await _hopperOptions.MessageSent.InvokeAsync(new(this, transportMessage, stream), cancellationToken);
+        await _hopperOptions.MessageSent.InvokeAsync(new(this, Guard.AgainstNull(state.GetTransportMessage()), stream), cancellationToken);
 
         await Task.CompletedTask.ConfigureAwait(false);
     }

@@ -57,7 +57,7 @@ public class PipelineExceptionFixture : IntegrationFixture
 
             var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-            await inboxWorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+            await inboxWorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
 
             await busControl.StartAsync().ConfigureAwait(false);
 

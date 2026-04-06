@@ -1,13 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Shuttle.Core.Contract;
+using Shuttle.Core.Pipelines;
 using Shuttle.Core.Reflection;
 
 namespace Shuttle.Hopper.Testing;
 
 public class BasicTransportFixture : IntegrationFixture
 {
-    private void ConfigureServices(IServiceCollection services, string test, int threadCount, string transportUriFormat)
+    private void ConfigureServices(IServiceCollection services, int threadCount, string transportUriFormat)
     {
         Guard.AgainstNull(services);
 
@@ -40,7 +41,7 @@ public class BasicTransportFixture : IntegrationFixture
 
     protected async Task TestReleaseMessageAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestReleaseMessageAsync), 1, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), 1, transportUriFormat);
 
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();
@@ -48,7 +49,7 @@ public class BasicTransportFixture : IntegrationFixture
 
         try
         {
-            await workTransport.SendAsync(new() { MessageId = Guid.NewGuid() }, new MemoryStream("message-body"u8.ToArray())).ConfigureAwait(false);
+            await workTransport.SendAsync(new MemoryStream("message-body"u8.ToArray()), new State().SetTransportMessage(new() { MessageId = Guid.NewGuid() })).ConfigureAwait(false);
 
             var receivedMessage = await workTransport.ReceiveAsync().ConfigureAwait(false);
 
@@ -77,7 +78,7 @@ public class BasicTransportFixture : IntegrationFixture
 
     protected async Task TestSimpleSendAndReceiveAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestSimpleSendAndReceiveAsync), 1, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), 1, transportUriFormat);
 
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();
@@ -89,10 +90,7 @@ public class BasicTransportFixture : IntegrationFixture
 
             stream.WriteByte(100);
 
-            await workTransport.SendAsync(new()
-            {
-                MessageId = Guid.NewGuid()
-            }, stream).ConfigureAwait(false);
+            await workTransport.SendAsync(stream, new State().SetTransportMessage(new() { MessageId = Guid.NewGuid() })).ConfigureAwait(false);
 
             var receivedMessage = await workTransport.ReceiveAsync().ConfigureAwait(false);
 
@@ -115,16 +113,13 @@ public class BasicTransportFixture : IntegrationFixture
 
     protected async Task TestUnacknowledgedMessageAsync(IServiceCollection services, string transportUriFormat)
     {
-        ConfigureServices(Guard.AgainstNull(services), nameof(TestUnacknowledgedMessageAsync), 1, transportUriFormat);
+        ConfigureServices(Guard.AgainstNull(services), 1, transportUriFormat);
 
         var transportService = services.BuildServiceProvider().CreateTransportService();
 
         var workTransport = await CreateWorkTransportAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
 
-        await workTransport.SendAsync(new()
-        {
-            MessageId = Guid.NewGuid()
-        }, new MemoryStream("message-body"u8.ToArray())).ConfigureAwait(false);
+        await workTransport.SendAsync(new MemoryStream("message-body"u8.ToArray()), new State().SetTransportMessage(new() { MessageId = Guid.NewGuid() })).ConfigureAwait(false);
 
         Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Not.Null);
         Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);

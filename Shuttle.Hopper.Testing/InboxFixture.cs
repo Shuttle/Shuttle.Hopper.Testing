@@ -155,7 +155,7 @@ public abstract class InboxFixture : IntegrationFixture
 
                 var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-                await busConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+                await busConfiguration.Inbox.WorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
             }
 
             var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? expectedCompletionTimeSpan.Add(TimeSpan.FromSeconds(5)));
@@ -301,7 +301,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             logger.LogInformation($"[enqueuing] : message id = '{transportMessage.MessageId}'");
 
-            await busConfiguration.Inbox!.WorkTransport!.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+            await busConfiguration.Inbox!.WorkTransport!.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
 
             logger.LogInformation($"[enqueued] : message id = '{transportMessage.MessageId}'");
 
@@ -374,7 +374,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-            await transport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+            await transport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
 
             Assert.That(transportMessage, Is.Not.Null, "TransportMessage may not be null.");
             Assert.That(transportMessage.HasExpired(), Is.False, "The message has already expired before being processed.");
@@ -453,7 +453,7 @@ public abstract class InboxFixture : IntegrationFixture
 
                 var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-                await busConfiguration.Inbox.WorkTransport.SendAsync(transportMessage, await serializer.SerializeAsync(transportMessage).ConfigureAwait(false)).ConfigureAwait(false);
+                await busConfiguration.Inbox.WorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
             }
 
             sw.Stop();

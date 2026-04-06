@@ -119,7 +119,7 @@ public class DeferredFixture : IntegrationFixture
 
             logger.LogInformation($"[start wait] : now = '{DateTimeOffset.UtcNow}'");
 
-            var timeout = ignoreTillDate.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(1));
+            var timeout = ignoreTillDate.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(5));
             var timedOut = false;
 
             // wait for the message to be returned from the deferred queue

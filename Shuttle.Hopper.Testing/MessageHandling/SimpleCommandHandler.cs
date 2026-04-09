@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Shuttle.Core.Contract;
+using Shuttle.Contract;
 using System;
 using Microsoft.Extensions.Logging.Abstractions;
 

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using Shuttle.Core.Serialization;
+using Shuttle.Serialization;
 
 namespace Shuttle.Hopper.Testing;
 

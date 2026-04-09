@@ -1,4 +1,4 @@
-using Shuttle.Core.Contract;
+using Shuttle.Contract;
 using Microsoft.Extensions.Options;
 
 namespace Shuttle.Hopper.Testing;

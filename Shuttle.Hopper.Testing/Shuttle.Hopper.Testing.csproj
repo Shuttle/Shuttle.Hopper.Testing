@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Description>Test fixtures to facilitate testing of components, such as queues, that relate to Shuttle.Hopper.</Description>
+    <Description>Fixtures to facilitate testing of components, such as queues, that relate to Shuttle.Hopper.</Description>
     <Version>22.0.0-alpha.1</Version>
     <PackageProjectUrl>https://github.com/Shuttle/Shuttle.Hopper.Testing</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Shuttle/Shuttle.Hopper.Testing.git</RepositoryUrl>

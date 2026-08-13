@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Contract;
+using Shuttle.Pipelines;
 
 namespace Shuttle.Hopper.Testing;
 
@@ -20,6 +21,16 @@ public static class ServiceProviderExtensions
                 serviceProvider.GetRequiredService<ITransportFactoryService>(),
                 serviceProvider.GetRequiredService<IUriResolver>()
             );
+        }
+
+        /// <summary>
+        /// Creates a throwaway pipeline for use when calling `ITransport` methods directly in test code, outside of an actual pipeline execution.
+        /// </summary>
+        public IPipeline CreatePipeline()
+        {
+            Guard.AgainstNull(serviceProvider);
+
+            return new Pipeline(serviceProvider.GetRequiredService<IOptions<PipelineOptions>>(), serviceProvider);
         }
 
         public ILogger<T> GetLogger<T>()

@@ -61,11 +61,11 @@ public class ReceivePipelineExceptionFeature :
 
             try
             {
-                var receivedMessage = await _busConfiguration.Inbox!.WorkTransport!.ReceiveAsync(cancellationToken);
+                var receivedMessage = await _busConfiguration.Inbox!.WorkTransport!.ReceiveAsync(eventArgs.Pipeline, cancellationToken);
 
                 Assert.That(receivedMessage, Is.Not.Null);
 
-                await _busConfiguration.Inbox.WorkTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, cancellationToken);
+                await _busConfiguration.Inbox.WorkTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, eventArgs.Pipeline, cancellationToken);
             }
             catch (Exception ex)
             {

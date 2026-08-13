@@ -142,13 +142,15 @@ public abstract class OutboxFixture : IntegrationFixture
 
             Assert.That(timedOut, Is.False, $"Timed out before processing {count} messages.");
 
+            var pipeline = serviceProvider.CreatePipeline();
+
             for (var i = 0; i < count; i++)
             {
-                var receivedMessage = await receiverWorkQueue.ReceiveAsync().ConfigureAwait(false);
+                var receivedMessage = await receiverWorkQueue.ReceiveAsync(pipeline).ConfigureAwait(false);
 
                 Assert.That(receivedMessage, Is.Not.Null);
 
-                await receiverWorkQueue.AcknowledgeAsync(receivedMessage!.AcknowledgementToken).ConfigureAwait(false);
+                await receiverWorkQueue.AcknowledgeAsync(receivedMessage!.AcknowledgementToken, pipeline).ConfigureAwait(false);
             }
 
             await receiverWorkQueue.TryDisposeAsync().ConfigureAwait(false);

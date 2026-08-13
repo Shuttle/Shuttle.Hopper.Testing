@@ -136,9 +136,11 @@ public class DeferredFixture : IntegrationFixture
 
             Assert.That(await feature.HasPendingDeferredMessagesAsync(), Is.False, "All the deferred messages were not handled.");
 
+            var pipeline = serviceProvider.CreatePipeline();
+
             Assert.That(await busConfiguration.Inbox!.ErrorTransport!.HasPendingAsync().ConfigureAwait(false), Is.False);
-            Assert.That(await busConfiguration.Inbox!.DeferredTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
-            Assert.That(await busConfiguration.Inbox!.WorkTransport!.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            Assert.That(await busConfiguration.Inbox!.DeferredTransport!.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
+            Assert.That(await busConfiguration.Inbox!.WorkTransport!.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
             await busControl.StopAsync().ConfigureAwait(false);
         }

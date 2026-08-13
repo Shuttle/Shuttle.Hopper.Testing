@@ -46,26 +46,29 @@ public class BasicTransportFixture : IntegrationFixture
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();
         var workTransport = await CreateWorkTransportAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
+        var pipeline = serviceProvider.CreatePipeline();
 
         try
         {
-            await workTransport.SendAsync(new MemoryStream("message-body"u8.ToArray()), new State().SetTransportMessage(new() { MessageId = Guid.NewGuid() })).ConfigureAwait(false);
+            pipeline.State.SetTransportMessage(new() { MessageId = Guid.NewGuid() });
 
-            var receivedMessage = await workTransport.ReceiveAsync().ConfigureAwait(false);
+            await workTransport.SendAsync(new MemoryStream("message-body"u8.ToArray()), pipeline).ConfigureAwait(false);
 
-            Assert.That(receivedMessage, Is.Not.Null);
-            Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
-
-            await workTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken).ConfigureAwait(false);
-
-            receivedMessage = await workTransport.ReceiveAsync().ConfigureAwait(false);
+            var receivedMessage = await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false);
 
             Assert.That(receivedMessage, Is.Not.Null);
-            Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
-            await workTransport.AcknowledgeAsync(receivedMessage!.AcknowledgementToken).ConfigureAwait(false);
+            await workTransport.ReleaseAsync(receivedMessage!.AcknowledgementToken, pipeline).ConfigureAwait(false);
 
-            Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            receivedMessage = await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false);
+
+            Assert.That(receivedMessage, Is.Not.Null);
+            Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
+
+            await workTransport.AcknowledgeAsync(receivedMessage!.AcknowledgementToken, pipeline).ConfigureAwait(false);
+
+            Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
             await workTransport.TryDeleteAsync().ConfigureAwait(false);
         }
@@ -83,6 +86,7 @@ public class BasicTransportFixture : IntegrationFixture
         var serviceProvider = services.BuildServiceProvider();
         var transportService = serviceProvider.CreateTransportService();
         var workTransport = await CreateWorkTransportAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
+        var pipeline = serviceProvider.CreatePipeline();
 
         try
         {
@@ -90,17 +94,19 @@ public class BasicTransportFixture : IntegrationFixture
 
             stream.WriteByte(100);
 
-            await workTransport.SendAsync(stream, new State().SetTransportMessage(new() { MessageId = Guid.NewGuid() })).ConfigureAwait(false);
+            pipeline.State.SetTransportMessage(new() { MessageId = Guid.NewGuid() });
 
-            var receivedMessage = await workTransport.ReceiveAsync().ConfigureAwait(false);
+            await workTransport.SendAsync(stream, pipeline).ConfigureAwait(false);
+
+            var receivedMessage = await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false);
 
             Assert.That(receivedMessage, Is.Not.Null, "It appears as though the test transport message was not enqueued or was somehow removed before it could be dequeued.");
             Assert.That(receivedMessage!.Stream.ReadByte(), Is.EqualTo(100));
-            Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
-            await workTransport.AcknowledgeAsync(receivedMessage.AcknowledgementToken).ConfigureAwait(false);
+            await workTransport.AcknowledgeAsync(receivedMessage.AcknowledgementToken, pipeline).ConfigureAwait(false);
 
-            Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+            Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
             await workTransport.TryDeleteAsync().ConfigureAwait(false);
         }
@@ -115,31 +121,38 @@ public class BasicTransportFixture : IntegrationFixture
     {
         ConfigureServices(Guard.AgainstNull(services), 1, transportUriFormat);
 
-        var transportService = services.BuildServiceProvider().CreateTransportService();
+        var serviceProvider = services.BuildServiceProvider();
+        var transportService = serviceProvider.CreateTransportService();
+        var pipeline = serviceProvider.CreatePipeline();
 
         var workTransport = await CreateWorkTransportAsync(transportService, transportUriFormat, true).ConfigureAwait(false);
 
-        await workTransport.SendAsync(new MemoryStream("message-body"u8.ToArray()), new State().SetTransportMessage(new() { MessageId = Guid.NewGuid() })).ConfigureAwait(false);
+        pipeline.State.SetTransportMessage(new() { MessageId = Guid.NewGuid() });
 
-        Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Not.Null);
-        Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+        await workTransport.SendAsync(new MemoryStream("message-body"u8.ToArray()), pipeline).ConfigureAwait(false);
+
+        Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Not.Null);
+        Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
         await transportService.TryDisposeAsync().ConfigureAwait(false);
-        transportService = services.BuildServiceProvider().CreateTransportService();
+
+        serviceProvider = services.BuildServiceProvider();
+        transportService = serviceProvider.CreateTransportService();
+        pipeline = serviceProvider.CreatePipeline();
 
         workTransport = await CreateWorkTransportAsync(transportService, transportUriFormat, false).ConfigureAwait(false);
 
-        var receivedMessage = await workTransport.ReceiveAsync().ConfigureAwait(false);
+        var receivedMessage = await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false);
 
         Assert.That(receivedMessage, Is.Not.Null);
-        Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+        Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
-        await workTransport.AcknowledgeAsync(receivedMessage!.AcknowledgementToken).ConfigureAwait(false);
+        await workTransport.AcknowledgeAsync(receivedMessage!.AcknowledgementToken, pipeline).ConfigureAwait(false);
         await workTransport.TryDisposeAsync().ConfigureAwait(false);
 
         workTransport = await CreateWorkTransportAsync(transportService, transportUriFormat, false).ConfigureAwait(false);
 
-        Assert.That(await workTransport.ReceiveAsync().ConfigureAwait(false), Is.Null);
+        Assert.That(await workTransport.ReceiveAsync(pipeline).ConfigureAwait(false), Is.Null);
 
         await workTransport.TryDeleteAsync().ConfigureAwait(false);
 

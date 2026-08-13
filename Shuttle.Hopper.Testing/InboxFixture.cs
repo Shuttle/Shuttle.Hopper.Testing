@@ -155,7 +155,7 @@ public abstract class InboxFixture : IntegrationFixture
 
                 var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-                await busConfiguration.Inbox.WorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
+                await busConfiguration.Inbox.WorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline).ConfigureAwait(false);
             }
 
             var timeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? expectedCompletionTimeSpan.Add(TimeSpan.FromSeconds(5)));
@@ -301,7 +301,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             logger.LogInformation($"[enqueuing] : message id = '{transportMessage.MessageId}'");
 
-            await busConfiguration.Inbox!.WorkTransport!.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
+            await busConfiguration.Inbox!.WorkTransport!.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline).ConfigureAwait(false);
 
             logger.LogInformation($"[enqueued] : message id = '{transportMessage.MessageId}'");
 
@@ -322,12 +322,12 @@ public abstract class InboxFixture : IntegrationFixture
 
             if (hasErrorTransport)
             {
-                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync().ConfigureAwait(false), Is.Null, "Should not have a message in queue 'test-inbox-work'.");
-                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-error"))).ReceiveAsync().ConfigureAwait(false), Is.Not.Null, "Should have a message in queue 'test-error'.");
+                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Null, "Should not have a message in queue 'test-inbox-work'.");
+                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-error"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Not.Null, "Should have a message in queue 'test-error'.");
             }
             else
             {
-                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync().ConfigureAwait(false), Is.Not.Null, "Should have a message in queue 'test-inbox-work'.");
+                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Not.Null, "Should have a message in queue 'test-inbox-work'.");
             }
         }
         finally
@@ -374,7 +374,7 @@ public abstract class InboxFixture : IntegrationFixture
 
             var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-            await transport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
+            await transport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline).ConfigureAwait(false);
 
             Assert.That(transportMessage, Is.Not.Null, "TransportMessage may not be null.");
             Assert.That(transportMessage.HasExpired(), Is.False, "The message has already expired before being processed.");
@@ -382,7 +382,7 @@ public abstract class InboxFixture : IntegrationFixture
             // wait until the message expires
             await Task.Delay(expiryDuration.Value.Add(TimeSpan.FromMilliseconds(50))).ConfigureAwait(false);
 
-            Assert.That(await transport.ReceiveAsync().ConfigureAwait(false), Is.Null, "The message did not expire.  Call this test only if your queue actually supports message expiry internally.");
+            Assert.That(await transport.ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Null, "The message did not expire.  Call this test only if your queue actually supports message expiry internally.");
 
             await transport.TryDeleteAsync().ConfigureAwait(false);
         }
@@ -453,7 +453,7 @@ public abstract class InboxFixture : IntegrationFixture
 
                 var transportMessage = transportMessagePipeline.State.GetTransportMessage()!;
 
-                await busConfiguration.Inbox.WorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline.State).ConfigureAwait(false);
+                await busConfiguration.Inbox.WorkTransport.SendAsync(await serializer.SerializeAsync(transportMessage).ConfigureAwait(false), transportMessagePipeline).ConfigureAwait(false);
             }
 
             sw.Stop();

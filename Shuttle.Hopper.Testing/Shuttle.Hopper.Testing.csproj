@@ -14,7 +14,7 @@
 
   <PropertyGroup>
     <Description>Fixtures to facilitate testing of components, such as queues, that relate to Shuttle.Hopper.</Description>
-    <Version>22.0.0-alpha.1</Version>
+    <Version>22.0.0</Version>
     <PackageProjectUrl>https://github.com/Shuttle/Shuttle.Hopper.Testing</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Shuttle/Shuttle.Hopper.Testing.git</RepositoryUrl>
     <PackageTags></PackageTags>

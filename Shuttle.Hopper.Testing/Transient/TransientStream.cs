@@ -53,7 +53,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
 
     public TransportUri Uri { get; }
 
-    public async Task AcknowledgeAsync(object acknowledgementToken, CancellationToken cancellationToken = default)
+    public async Task AcknowledgeAsync(object acknowledgementToken, IPipeline pipeline, CancellationToken cancellationToken = default)
     {
         var itemId = (int)acknowledgementToken;
 
@@ -77,7 +77,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _hopperOptions.MessageAcknowledged.InvokeAsync(new(this, acknowledgementToken), cancellationToken);
+        await _hopperOptions.MessageAcknowledged.InvokeAsync(new(this, acknowledgementToken, pipeline), cancellationToken);
 
         await Task.CompletedTask.ConfigureAwait(false);
     }
@@ -105,7 +105,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    public async Task SendAsync(Stream stream, IState state, CancellationToken cancellationToken = default)
+    public async Task SendAsync(Stream stream, IPipeline pipeline, CancellationToken cancellationToken = default)
     {
         await Lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -113,19 +113,19 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
         {
             _itemId++;
 
-            Queues[Uri.ToString()].Add(_itemId, new(_itemId, Guard.AgainstNull(state.GetTransportMessage()), await stream.CopyAsync().ConfigureAwait(false)));
+            Queues[Uri.ToString()].Add(_itemId, new(_itemId, Guard.AgainstNull(pipeline.State.GetTransportMessage()), await stream.CopyAsync().ConfigureAwait(false)));
         }
         finally
         {
             Lock.Release();
         }
 
-        await _hopperOptions.MessageSent.InvokeAsync(new(this, Guard.AgainstNull(state.GetTransportMessage()), stream), cancellationToken);
+        await _hopperOptions.MessageSent.InvokeAsync(new(this, stream, pipeline), cancellationToken);
 
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    public async Task<ReceivedMessage?> ReceiveAsync(CancellationToken cancellationToken = default)
+    public async Task<ReceivedMessage?> ReceiveAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
     {
         ReceivedMessage? result = null;
 
@@ -160,7 +160,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
 
         if (result != null)
         {
-            await _hopperOptions.MessageReceived.InvokeAsync(new(this, result), cancellationToken);
+            await _hopperOptions.MessageReceived.InvokeAsync(new(this, result, pipeline), cancellationToken);
         }
 
         return result;
@@ -198,7 +198,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
         await _hopperOptions.TransportOperation.InvokeAsync(new(this, "[purge/completed]"), cancellationToken);
     }
 
-    public async Task ReleaseAsync(object acknowledgementToken, CancellationToken cancellationToken = default)
+    public async Task ReleaseAsync(object acknowledgementToken, IPipeline pipeline, CancellationToken cancellationToken = default)
     {
         var itemId = (int)acknowledgementToken;
 
@@ -220,7 +220,7 @@ public class TransientStream : ITransport, ICreateTransport, IPurgeTransport
             Lock.Release();
         }
 
-        await _hopperOptions.MessageReleased.InvokeAsync(new(this, acknowledgementToken), cancellationToken);
+        await _hopperOptions.MessageReleased.InvokeAsync(new(this, acknowledgementToken, pipeline), cancellationToken);
 
         await Task.CompletedTask.ConfigureAwait(false);
     }

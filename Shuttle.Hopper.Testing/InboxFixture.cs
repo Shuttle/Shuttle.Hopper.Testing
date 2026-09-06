@@ -335,15 +335,15 @@ public abstract class InboxFixture : IntegrationFixture
 
             Assert.That(!timedOut, "Timed out before message was received.");
 
-            // Claim the message ourselves before stopping the bus, so `StopAsync` can't race an in-flight redelivery cycle.
-            var idleTimeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(5));
+            await busControl.StopAsync().ConfigureAwait(false);
+
+            // Retry rather than check once: `StopAsync` can interrupt an in-flight release mid-step, leaving the message briefly unavailable.
+            var settleTimeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(35));
 
             if (hasErrorTransport)
             {
                 var errorTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-error"));
-                var errorMessage = await WaitForMessageAsync(errorTransport, transportMessagePipeline, idleTimeout).ConfigureAwait(false);
-
-                await busControl.StopAsync().ConfigureAwait(false);
+                var errorMessage = await WaitForMessageAsync(errorTransport, transportMessagePipeline, settleTimeout).ConfigureAwait(false);
 
                 Assert.That(errorMessage, Is.Not.Null, "Should have a message in queue 'test-error'.");
                 Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Null, "Should not have a message in queue 'test-inbox-work'.");
@@ -351,9 +351,7 @@ public abstract class InboxFixture : IntegrationFixture
             else
             {
                 var workTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"));
-                var workMessage = await WaitForMessageAsync(workTransport, transportMessagePipeline, idleTimeout).ConfigureAwait(false);
-
-                await busControl.StopAsync().ConfigureAwait(false);
+                var workMessage = await WaitForMessageAsync(workTransport, transportMessagePipeline, settleTimeout).ConfigureAwait(false);
 
                 Assert.That(workMessage, Is.Not.Null, "Should have a message in queue 'test-inbox-work'.");
             }

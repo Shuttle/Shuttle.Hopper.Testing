@@ -73,6 +73,23 @@ public abstract class InboxFixture : IntegrationFixture
         .AddMessageHandlersFrom(Assembly.GetExecutingAssembly());
     }
 
+    private static async Task<ReceivedMessage?> WaitForMessageAsync(ITransport transport, IPipeline pipeline, DateTimeOffset timeout)
+    {
+        ReceivedMessage? message = null;
+
+        while (message == null && DateTimeOffset.UtcNow < timeout)
+        {
+            message = await transport.ReceiveAsync(pipeline).ConfigureAwait(false);
+
+            if (message == null)
+            {
+                await Task.Delay(25).ConfigureAwait(false);
+            }
+        }
+
+        return message;
+    }
+
     private static async Task ConfigureTransportsAsync(ITransportService transportService, string transportUriFormat, bool hasErrorTransport)
     {
         var workTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"));
@@ -318,16 +335,27 @@ public abstract class InboxFixture : IntegrationFixture
 
             Assert.That(!timedOut, "Timed out before message was received.");
 
-            await busControl.StopAsync().ConfigureAwait(false);
+            // Claim the message ourselves before stopping the bus, so `StopAsync` can't race an in-flight redelivery cycle.
+            var idleTimeout = DateTimeOffset.UtcNow.Add(timeoutTimeSpan ?? TimeSpan.FromSeconds(5));
 
             if (hasErrorTransport)
             {
+                var errorTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-error"));
+                var errorMessage = await WaitForMessageAsync(errorTransport, transportMessagePipeline, idleTimeout).ConfigureAwait(false);
+
+                await busControl.StopAsync().ConfigureAwait(false);
+
+                Assert.That(errorMessage, Is.Not.Null, "Should have a message in queue 'test-error'.");
                 Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Null, "Should not have a message in queue 'test-inbox-work'.");
-                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-error"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Not.Null, "Should have a message in queue 'test-error'.");
             }
             else
             {
-                Assert.That(await (await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"))).ReceiveAsync(transportMessagePipeline).ConfigureAwait(false), Is.Not.Null, "Should have a message in queue 'test-inbox-work'.");
+                var workTransport = await transportService.GetAsync(string.Format(transportUriFormat, "test-inbox-work"));
+                var workMessage = await WaitForMessageAsync(workTransport, transportMessagePipeline, idleTimeout).ConfigureAwait(false);
+
+                await busControl.StopAsync().ConfigureAwait(false);
+
+                Assert.That(workMessage, Is.Not.Null, "Should have a message in queue 'test-inbox-work'.");
             }
         }
         finally

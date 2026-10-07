@@ -11,6 +11,8 @@ public static class TransportServiceExtensions
         "test-distributor-control",
         "test-inbox-work",
         "test-inbox-deferred",
+        "test-inbox-work-priority",
+        "test-inbox-deferred-priority",
         "test-outbox-work",
         "test-error"
     ];

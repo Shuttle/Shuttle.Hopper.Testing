@@ -9,12 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Moq" Version="4.21.0" />
     <PackageReference Include="NUnit" Version="5.0.0" />
-    <PackageReference Include="Shuttle.Hopper" Version="22.1.0" />
+    <PackageReference Include="Shuttle.Hopper" Version="22.1.1" />
   </ItemGroup>
 
   <PropertyGroup>
     <Description>Fixtures to facilitate testing of components, such as queues, that relate to Shuttle.Hopper.</Description>
-    <Version>22.1.0</Version>
+    <Version>22.1.1</Version>
     <PackageProjectUrl>https://github.com/Shuttle/Shuttle.Hopper.Testing</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Shuttle/Shuttle.Hopper.Testing.git</RepositoryUrl>
     <PackageTags></PackageTags>
